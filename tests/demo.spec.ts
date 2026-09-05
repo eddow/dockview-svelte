@@ -12,6 +12,9 @@ test('landing page links all demos', async ({ page }) => {
 		'bind:active',
 		'Empty state',
 		'Floating groups',
+		'Splitview',
+		'Gridview',
+		'Paneview',
 	]) {
 		await expect(page.getByRole('link', { name })).toBeVisible()
 	}
@@ -129,4 +132,49 @@ test('empty demo shows watermark and opens from it', async ({ page }) => {
 	await expect(page.getByRole('tab', { name: 'A' })).toBeVisible()
 	await page.getByRole('button', { name: 'close all' }).click()
 	await expect(watermarkText).toBeVisible()
+})
+
+test('splitview demo opens panes and toggles orientation', async ({ page }) => {
+	await page.goto('/demos/splitview')
+
+	const demo = page.locator('.demo')
+	// Both panes render; the second is active and visible.
+	await expect(demo.getByText('Right pane', { exact: true })).toBeVisible()
+	await expect(page.getByText('views: 2')).toBeVisible()
+	// Add a pane → count updates.
+	await page.getByRole('button', { name: 'add pane' }).click()
+	await expect(page.getByText('views: 3')).toBeVisible()
+	// Orientation toggle flips the button label.
+	await page.getByRole('button', { name: /orientation:/ }).click()
+	await expect(page.getByRole('button', { name: 'orientation: vertical' })).toBeVisible()
+	await expect(demo.getByText('Right pane', { exact: true })).toBeVisible()
+})
+
+test('gridview demo opens cells and toggles orientation', async ({ page }) => {
+	await page.goto('/demos/gridview')
+
+	const demo = page.locator('.demo')
+	// Both cells render (the second takes the width, like the splitview demo).
+	await expect(demo.getByText('Right cell', { exact: true })).toBeVisible()
+	await expect(page.getByText('cells: 2')).toBeVisible()
+	// Add a cell → count updates.
+	await page.getByRole('button', { name: 'add cell' }).click()
+	await expect(page.getByText('cells: 3')).toBeVisible()
+	// Orientation toggle flips the button label.
+	await page.getByRole('button', { name: /orientation:/ }).click()
+	await expect(page.getByRole('button', { name: 'orientation: vertical' })).toBeVisible()
+	await expect(demo.getByText('Right cell', { exact: true })).toBeVisible()
+})
+
+test('paneview demo opens panes and collapses', async ({ page }) => {
+	await page.goto('/demos/paneview')
+
+	const demo = page.locator('.demo')
+	await expect(demo.getByText('First pane (custom header)', { exact: true })).toBeVisible()
+	await expect(page.getByText('panes: 2')).toBeVisible()
+	// Add a pane → count updates.
+	await page.getByRole('button', { name: 'add pane' }).click()
+	await expect(page.getByText('panes: 3')).toBeVisible()
+	// Custom header renders the pane title with a collapse toggle.
+	await expect(demo.getByText('Pane A', { exact: true }).first()).toBeVisible()
 })

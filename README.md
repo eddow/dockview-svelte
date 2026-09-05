@@ -295,6 +295,91 @@ The factory forwards this context to every widget mount, so `getContext` works
 inside panel content and tabs (covered by `core/context.test.ts`).
 This is the hook a future `<DvWidgets>` slot-forwarder will build on (deferred — see `plans/main.md`).
 
+## Splitview
+
+A `<Splitview>` component mirrors the `Dockview` idiom for plain resizable split
+panes — no tabs or headers. Same `widgets` registry, typed `openPanel`, reactive
+`state`, and `bind:layout`/`bind:views`:
+
+```svelte
+<script lang="ts">
+	import { Splitview, defineSplitviewWidgets, type SplitviewHandle } from 'dockview-svelte';
+	import { Orientation } from 'dockview';
+
+	const widgets = defineSplitviewWidgets({
+		a: { component: PaneA },
+		b: { component: PaneB },
+	});
+
+	let handle = $state<SplitviewHandle<typeof widgets> | undefined>(undefined);
+</script>
+
+<Splitview bind:handle {widgets} options={{ orientation: Orientation.HORIZONTAL }} />
+```
+
+Widgets receive a `SplitviewState` (same shape as `PanelState` minus the
+tab-only `title`/`shown`/`pinned`/`groupActive`), and `handle` exposes
+`openPanel`, `removePanel(id)`, and `movePanel(from, to)`. See `/demos/splitview`.
+
+## Gridview
+
+A `<Gridview>` component mirrors the `Splitview` idiom for 2-D grid splits —
+cells arranged in rows and columns, no tabs or headers. Same `widgets`
+registry, typed `openPanel`, reactive `state`, and `bind:layout`/`bind:panels`:
+
+```svelte
+<script lang="ts">
+	import { Gridview, defineGridviewWidgets, type GridviewHandle } from 'dockview-svelte';
+	import { Orientation } from 'dockview';
+
+	const widgets = defineGridviewWidgets({
+		a: { component: CellA },
+		b: { component: CellB },
+	});
+
+	let handle = $state<GridviewHandle<typeof widgets> | undefined>(undefined);
+</script>
+
+<Gridview bind:handle {widgets} options={{ orientation: Orientation.HORIZONTAL }} />
+```
+
+Widgets receive a `GridviewState` (same shape as `SplitviewState`), and `handle`
+exposes `openPanel`, `removePanel(id)`, `movePanel(id, { direction, reference, size? })`,
+`setVisible(id, visible)`, and `setActive(id)`. New cells are positioned with
+`position: { direction, referencePanel }` (direction `'left' | 'right' | 'above' |
+'below' | 'within'`). `bind:panels` mirrors `api.panels`; `bind:activePanel`
+mirrors `onDidActivePanelChange`. `orientation` defaults to `HORIZONTAL`.
+See `/demos/gridview`.
+
+## Paneview
+
+A `<Paneview>` component mirrors the `Dockview` idiom for collapsible VS Code-style
+sidebars — a vertical stack of panes, each with a body plus an optional custom
+header sharing one reactive `state`. Same `widgets` registry, typed `openPanel`,
+and `bind:layout`/`bind:panels`:
+
+```svelte
+<script lang="ts">
+	import { Paneview, definePaneviewWidgets, type PaneviewHandle } from 'dockview-svelte';
+
+	const widgets = definePaneviewWidgets({
+		a: { component: PaneA, header: PaneHeaderA, title: 'Pane A' },
+		b: { component: PaneB }, // default header (plain title text)
+	});
+
+	let handle = $state<PaneviewHandle<typeof widgets> | undefined>(undefined);
+</script>
+
+<Paneview bind:handle {widgets} />
+```
+
+Widgets receive a `PaneviewState` (`SplitviewState` plus `title` and two-way
+`expanded`). Titles resolve through the same three-tier chain as `Dockview`
+(explicit → per-widget → widget key). Omit `header` to use dockview's built-in
+`DefaultHeader`. `handle` exposes `openPanel`, `removePanel(id)`,
+`movePanel(from, to)`, `setVisible(id, visible)`, and `setExpanded(id, expanded)`.
+See `/demos/paneview`.
+
 ## SSR
 
 The component renders an empty `<div>` on the server and instantiates `DockviewComponent` in `onMount`. No action needed.
@@ -304,12 +389,21 @@ The component renders an empty `<div>` on the server and instantiates `DockviewC
 | Export | Kind | Notes |
 | ------ | ---- | ----- |
 | `Dockview` | Component | `widgets`, `options`, `bind:layout`, `bind:handle`, `bind:active`, `bind:floating`, `bind:popout`, `watermark`, `left/right/prefixHeaderActions` |
+| `Splitview` | Component | `widgets`, `options`, `bind:layout`, `bind:handle`, `bind:views` — no tabs/headers |
 | `DefaultTab` | Component | Built-in header (title + close) |
 | `defineWidgets` / `WidgetRegistry` | Function / class | Typed registry construction / mutable registry |
-| `DOCKVIEW_CONTEXT_KEY` / `DockviewContext` | const / type | `api` + `registerWidget` for descendants |
+| `defineSplitviewWidgets` / `SplitviewWidgetRegistry` | Function / class | Splitview registry (no tabs/titles) |
+| `defineGridviewWidgets` / `GridviewWidgetRegistry` | Function / class | Gridview registry (no tabs/titles) |
+| `definePaneviewWidgets` / `PaneviewWidgetRegistry` | Function / class | Paneview registry (body + optional header + title) |
+| `Gridview` | Component | `widgets`, `options`, `bind:layout`, `bind:handle`, `bind:panels`, `bind:activePanel` — no tabs/headers |
+| `Paneview` | Component | `widgets`, `options`, `bind:layout`, `bind:handle`, `bind:panels` — collapsible panes with optional custom headers |
+| `DOCKVIEW_CONTEXT_KEY` / `DockviewContext` / `SplitviewContext` / `GridviewContext` / `PaneviewContext` | const / types | `api` + `registerWidget` for descendants |
 | `WatermarkComponent` / `WatermarkProps` | types | `watermark` prop: `{ openPanel }` |
 | `HeaderActionComponent` / `HeaderActionProps` | types | header-action props: `{ containerApi, group, state }` |
 | `PanelState`, `PanelHandle`, `DockviewHandle`, `ActiveState`, `FloatingState`, `PopoutState`, `GroupState` | Types | Shared state, open result, bound handle, active panel/group, floating/popout windows, group header state |
+| `SplitviewState`, `SplitviewPanelHandle`, `SplitviewHandle`, `SplitviewWidgets`, `SplitviewWidgetDefinition`, `SplitviewWidgetComponent`, `SplitviewParamsOf`, `SplitviewOpenPanelOptions`, `SplitviewOpenPanelFn` | Types | Splitview state, handle, registry and open typings |
+| `GridviewState`, `GridviewPanelHandle`, `GridviewHandle`, `GridviewMoveOptions`, `GridviewWidgets`, `GridviewWidgetDefinition`, `GridviewWidgetComponent`, `GridviewParamsOf`, `GridviewOpenPanelOptions`, `GridviewOpenPanelFn` | Types | Gridview state, handle, registry and open typings |
+| `PaneviewState`, `PaneviewPanelHandle`, `PaneviewHandle`, `PaneviewWidgets`, `PaneviewWidgetDefinition`, `PaneviewWidgetComponent`, `PaneviewHeaderComponent`, `PaneviewParamsOf`, `PaneviewOpenPanelOptions`, `PaneviewOpenPanelFn` | Types | Paneview state, handle, registry and open typings |
 | `WidgetDefinition`, `Widgets`, `WidgetComponent`, `ParamsOf`, `OpenPanelOptions`, `OpenPanelFn` | Types | Registry and open typings |
 
 ## Developing
@@ -318,8 +412,8 @@ The component renders an empty `<div>` on the server and instantiates `DockviewC
 npm run dev          # demo gallery (landing + /demos/*)
 npm run check        # svelte-check
 npm run biome        # lint + format check
-npm run test:unit    # vitest (registry, utils, factory, context)
-npm run test:e2e     # playwright (11 tests over the demo gallery)
+npm run test:unit    # vitest (registry, utils, factory, context, splitview, gridview, paneview)
+npm run test:e2e     # playwright (14 tests over the demo gallery)
 npm run prepack      # svelte-package + publint
 ```
 
@@ -338,8 +432,9 @@ highlighted source (Shiki, display-only):
 | `/demos/events` | `bind:active` + event log |
 | `/demos/floating` | `bind:floating` / `bind:popout` + group header float/popout |
 | `/demos/empty` | `watermark` empty-state overlay |
-| `/demos/empty` | empty state (`watermark` prop) |
-| `/demos/floating` | floating windows (`bind:floating`, `handle.float`/`dockAll`, header + tab float/popout buttons) |
+| `/demos/splitview` | resizable split panes (no tabs/headers) |
+| `/demos/gridview` | 2-D grid splits (no tabs/headers) |
+| `/demos/paneview` | collapsible panes with optional custom headers |
 
 ## License
 

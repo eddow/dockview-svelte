@@ -16,6 +16,9 @@ const demos = [
 	{ href: '/demos/events', label: 'bind:active + events' },
 	{ href: '/demos/empty', label: 'Empty state (watermark)' },
 	{ href: '/demos/floating', label: 'Floating groups' },
+	{ href: '/demos/splitview', label: 'Splitview' },
+	{ href: '/demos/gridview', label: 'Gridview' },
+	{ href: '/demos/paneview', label: 'Paneview' },
 ] as const
 
 const pageSources = import.meta.glob('./demos/*/+page.svelte', {
@@ -39,6 +42,9 @@ const demoWidgets: Record<string, string[]> = {
 	'/demos/events': ['BasicPanel.svelte'],
 	'/demos/empty': ['BasicPanel.svelte', 'EmptyWatermark.svelte'],
 	'/demos/floating': ['BasicPanel.svelte', 'GroupHeaderActions.svelte', 'PanelHeaderTab.svelte'],
+	'/demos/splitview': ['SplitPanel.svelte'],
+	'/demos/gridview': ['GridCell.svelte'],
+	'/demos/paneview': ['PaneBody.svelte', 'PaneHeader.svelte'],
 }
 
 let pathname = $derived(page.url.pathname)

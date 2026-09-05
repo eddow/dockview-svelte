@@ -1,12 +1,25 @@
 import type {
+	AddGridviewComponentOptions,
 	AddPanelOptions,
+	AddPaneviewComponentOptions,
+	AddSplitviewComponentOptions,
+	Direction,
 	DockviewApi,
 	DockviewGroupLocation,
 	DockviewGroupPanel,
 	DockviewPanelApi,
 	DockviewPopoutGroupOptions,
 	FloatingGroupOptions,
+	GridviewApi,
+	GridviewPanelApi,
 	IDockviewPanel,
+	IGridviewPanel,
+	IPaneviewPanel,
+	ISplitviewPanel,
+	PaneviewApi,
+	PaneviewPanelApi,
+	SplitviewApi,
+	SplitviewPanelApi,
 } from 'dockview'
 import type { Component, ComponentProps } from 'svelte'
 
@@ -215,4 +228,295 @@ export interface DockviewHandle<W extends Widgets = Widgets> {
 	) => Promise<boolean>
 	/** Dock every floating window back into the main grid. */
 	dockAll: () => void
+}
+
+// ===== Splitview =====
+
+/**
+ * The reactive state shared by a splitview panel. Same shape as
+ * {@link PanelState} minus the tab-only fields (`title`, `shown`, `pinned`,
+ * `groupActive`) — splitview panes have no headers or tabs.
+ */
+export interface SplitviewState<P = Record<string, unknown>> {
+	/** Double-bound with dockview: mutations propagate to `api.updateParameters` and back. */
+	params: P
+	/** Written by the renderer's `layout()` hook via `api.onDidDimensionsChange`. */
+	size: { width: number; height: number }
+	/** dockview `api.isVisible` — read-only mirror. */
+	visible: boolean
+	/** dockview `api.isActive` — write `true` to activate (writing `false` is ignored). */
+	active: boolean
+	/** dockview `api.isFocused` — read-only mirror. */
+	focused: boolean
+	/** The per-panel dockview api. */
+	api: SplitviewPanelApi
+	/** App channel for arbitrary widget data, e.g. `custom.unread = 3`. */
+	custom: Record<string, unknown>
+}
+
+/** A splitview widget receives its whole {@link SplitviewState} as a `state` prop. */
+export type SplitviewWidgetComponent<P = Record<string, unknown>> = Component<{
+	state: SplitviewState<P>
+}>
+
+/** Extracts the params type of a splitview widget from its `state` prop. */
+export type SplitviewParamsOf<C extends Component<any>> = 'state' extends keyof ComponentProps<C>
+	? ComponentProps<C>['state'] extends SplitviewState<infer P>
+		? P
+		: Record<string, unknown>
+	: Record<string, unknown>
+
+/**
+ * A single splitview registry entry. No `tab`/`title` — splitview panes have
+ * no headers.
+ */
+export interface SplitviewWidgetDefinition<
+	C extends SplitviewWidgetComponent<any> = SplitviewWidgetComponent,
+> {
+	/** Content component rendered inside the split pane. */
+	component: C
+}
+
+/** The splitview widget registry: a map of widget key → definition. */
+export type SplitviewWidgets = Record<string, SplitviewWidgetDefinition>
+
+/** A handle returned by a splitview `openPanel`, bundling the pane and its state. */
+export interface SplitviewPanelHandle<P = Record<string, unknown>> {
+	id: string
+	/** Raw dockview splitview panel. */
+	panel: ISplitviewPanel
+	/** Convenience alias of `panel.api`. */
+	api: SplitviewPanelApi
+	/** Reactive state. */
+	state: SplitviewState<P>
+}
+
+/** Options accepted by a splitview `openPanel`. Owns `id`/`params`, passes the rest through. */
+export type SplitviewOpenPanelOptions<P> = {
+	id?: string
+	params?: P
+} & Omit<AddSplitviewComponentOptions, 'id' | 'component' | 'params'>
+
+export type SplitviewOpenPanelFn<W extends SplitviewWidgets> = <K extends keyof W & string>(
+	key: K,
+	options?: SplitviewOpenPanelOptions<SplitviewParamsOf<W[K]['component']>>
+) => SplitviewPanelHandle<SplitviewParamsOf<W[K]['component']>>
+
+/** Bound via `bind:handle`; bundles raw api access with the typed ergonomic surface. */
+export interface SplitviewHandle<W extends SplitviewWidgets = SplitviewWidgets> {
+	/** The raw splitview api. */
+	api: SplitviewApi
+	/** Open a split pane by widget key with an optional params/position. */
+	openPanel: SplitviewOpenPanelFn<W>
+	/** Register (or override) a widget type at runtime. */
+	registerWidget: (key: string, def: SplitviewWidgetDefinition) => void
+	/** Remove a split pane by id. */
+	removePanel: (id: string) => void
+	/** Move a split pane from one index to another. */
+	movePanel: (from: number, to: number) => void
+}
+
+// ===== Gridview =====
+
+/**
+ * The reactive state shared by a gridview panel. Same shape as
+ * {@link SplitviewState} — grid cells have no headers or tabs.
+ */
+export interface GridviewState<P = Record<string, unknown>> {
+	/** Double-bound with dockview: mutations propagate to `api.updateParameters` and back. */
+	params: P
+	/** Written by the renderer's `layout()` hook, rAF-throttled. */
+	size: { width: number; height: number }
+	/** dockview `api.isVisible` — read-only mirror. */
+	visible: boolean
+	/** dockview `api.isActive` — write `true` to activate (writing `false` is ignored). */
+	active: boolean
+	/** dockview `api.isFocused` — read-only mirror. */
+	focused: boolean
+	/** The per-panel dockview api. */
+	api: GridviewPanelApi
+	/** App channel for arbitrary widget data, e.g. `custom.unread = 3`. */
+	custom: Record<string, unknown>
+}
+
+/** A gridview widget receives its whole {@link GridviewState} as a `state` prop. */
+export type GridviewWidgetComponent<P = Record<string, unknown>> = Component<{
+	state: GridviewState<P>
+}>
+
+/** Extracts the params type of a gridview widget from its `state` prop. */
+export type GridviewParamsOf<C extends Component<any>> = 'state' extends keyof ComponentProps<C>
+	? ComponentProps<C>['state'] extends GridviewState<infer P>
+		? P
+		: Record<string, unknown>
+	: Record<string, unknown>
+
+/**
+ * A single gridview registry entry. No `tab`/`title` — grid cells have
+ * no headers.
+ */
+export interface GridviewWidgetDefinition<
+	C extends GridviewWidgetComponent<any> = GridviewWidgetComponent,
+> {
+	/** Content component rendered inside the grid cell. */
+	component: C
+}
+
+/** The gridview widget registry: a map of widget key → definition. */
+export type GridviewWidgets = Record<string, GridviewWidgetDefinition>
+
+/** A handle returned by a gridview `openPanel`, bundling the cell and its state. */
+export interface GridviewPanelHandle<P = Record<string, unknown>> {
+	id: string
+	/** Raw dockview gridview panel. */
+	panel: IGridviewPanel
+	/** Convenience alias of `panel.api`. */
+	api: GridviewPanelApi
+	/** Reactive state. */
+	state: GridviewState<P>
+}
+
+/** Options accepted by a gridview `openPanel`. Owns `id`/`params`, passes the rest through. */
+export type GridviewOpenPanelOptions<P> = {
+	id?: string
+	params?: P
+} & Omit<AddGridviewComponentOptions, 'id' | 'component' | 'params'>
+
+export type GridviewOpenPanelFn<W extends GridviewWidgets> = <K extends keyof W & string>(
+	key: K,
+	options?: GridviewOpenPanelOptions<GridviewParamsOf<W[K]['component']>>
+) => GridviewPanelHandle<GridviewParamsOf<W[K]['component']>>
+
+/** Options for `handle.movePanel`: a direction relative to a reference panel id. */
+export interface GridviewMoveOptions {
+	/** `'left' | 'right' | 'above' | 'below' | 'within'` — relative to `reference`. */
+	direction: Direction
+	/** Id of the panel to position relative to. */
+	reference: string
+	/** Optional size of the moved panel. */
+	size?: number
+}
+
+/** Bound via `bind:handle`; bundles raw api access with the typed ergonomic surface. */
+export interface GridviewHandle<W extends GridviewWidgets = GridviewWidgets> {
+	/** The raw gridview api. */
+	api: GridviewApi
+	/** Open a grid cell by widget key with an optional params/position. */
+	openPanel: GridviewOpenPanelFn<W>
+	/** Register (or override) a widget type at runtime. */
+	registerWidget: (key: string, def: GridviewWidgetDefinition) => void
+	/** Remove a grid cell by id. */
+	removePanel: (id: string) => void
+	/** Move a grid cell relative to a reference panel. */
+	movePanel: (id: string, options: GridviewMoveOptions) => void
+	/** Show or hide a grid cell by id. */
+	setVisible: (id: string, visible: boolean) => void
+	/** Activate a grid cell by id. */
+	setActive: (id: string) => void
+}
+
+// ===== Paneview =====
+
+/**
+ * The reactive state shared by a paneview pane's body and header. Same shape
+ * as {@link SplitviewState} plus the pane-specific `title` (owned by dockview
+ * at open time, mirrored read-only) and `expanded` (two-way via
+ * `api.setExpanded`).
+ */
+export interface PaneviewState<P = Record<string, unknown>> {
+	/** Double-bound with dockview: mutations propagate to `api.updateParameters` and back. */
+	params: P
+	/** Written by the renderer's `layout()` hook, rAF-throttled. */
+	size: { width: number; height: number }
+	/** dockview `api.isVisible` — read-only mirror. */
+	visible: boolean
+	/** dockview `api.isActive` — write `true` to activate (writing `false` is ignored). */
+	active: boolean
+	/** dockview `api.isFocused` — read-only mirror. */
+	focused: boolean
+	/** dockview `api.isExpanded` — two-way (`setExpanded`). */
+	expanded: boolean
+	/** The per-pane dockview api. */
+	api: PaneviewPanelApi
+	/** Read-only mirror of dockview's title (fixed at open time). */
+	title: string
+	/** App channel for arbitrary widget data, e.g. `custom.unread = 3`. */
+	custom: Record<string, unknown>
+}
+
+/** A paneview body widget receives its whole {@link PaneviewState} as a `state` prop. */
+export type PaneviewWidgetComponent<P = Record<string, unknown>> = Component<{
+	state: PaneviewState<P>
+}>
+
+/** A paneview header widget receives the same {@link PaneviewState} as the body. */
+export type PaneviewHeaderComponent = Component<{
+	state: PaneviewState<any>
+}>
+
+/** Extracts the params type of a paneview widget from its `state` prop. */
+export type PaneviewParamsOf<C extends Component<any>> = 'state' extends keyof ComponentProps<C>
+	? ComponentProps<C>['state'] extends PaneviewState<infer P>
+		? P
+		: Record<string, unknown>
+	: Record<string, unknown>
+
+/**
+ * A single paneview registry entry: one pane *type*, keyed by its widget key.
+ * The header lives on the same definition as the body so they can never drift.
+ * Omit `header` to use dockview's built-in default header (plain title text).
+ */
+export interface PaneviewWidgetDefinition<
+	C extends PaneviewWidgetComponent<any> = PaneviewWidgetComponent,
+> {
+	/** Body component rendered inside the pane. */
+	component: C
+	/** Header component for this pane. Omit to use dockview's default header. */
+	header?: PaneviewHeaderComponent
+	/** Default title for this pane (tier 2 in the resolution chain). */
+	title?: string
+}
+
+/** The paneview widget registry: a map of widget key → definition. */
+export type PaneviewWidgets = Record<string, PaneviewWidgetDefinition>
+
+/** A handle returned by a paneview `openPanel`, bundling the pane and its state. */
+export interface PaneviewPanelHandle<P = Record<string, unknown>> {
+	id: string
+	/** Raw dockview paneview panel. */
+	panel: IPaneviewPanel
+	/** Convenience alias of `panel.api`. */
+	api: PaneviewPanelApi
+	/** Reactive state shared by header + body. */
+	state: PaneviewState<P>
+}
+
+/** Options accepted by a paneview `openPanel`. Owns `id`/`title`/`params`, passes the rest through. */
+export type PaneviewOpenPanelOptions<P> = {
+	id?: string
+	title?: string
+	params?: P
+} & Omit<AddPaneviewComponentOptions, 'id' | 'component' | 'headerComponent' | 'title' | 'params'>
+
+export type PaneviewOpenPanelFn<W extends PaneviewWidgets> = <K extends keyof W & string>(
+	key: K,
+	options?: PaneviewOpenPanelOptions<PaneviewParamsOf<W[K]['component']>>
+) => PaneviewPanelHandle<PaneviewParamsOf<W[K]['component']>>
+
+/** Bound via `bind:handle`; bundles raw api access with the typed ergonomic surface. */
+export interface PaneviewHandle<W extends PaneviewWidgets = PaneviewWidgets> {
+	/** The raw paneview api. */
+	api: PaneviewApi
+	/** Open a pane by widget key with an optional title/params/position. */
+	openPanel: PaneviewOpenPanelFn<W>
+	/** Register (or override) a widget type at runtime. */
+	registerWidget: (key: string, def: PaneviewWidgetDefinition) => void
+	/** Remove a pane by id. */
+	removePanel: (id: string) => void
+	/** Move a pane from one index to another. */
+	movePanel: (from: number, to: number) => void
+	/** Show or hide a pane by id. */
+	setVisible: (id: string, visible: boolean) => void
+	/** Expand or collapse a pane by id. */
+	setExpanded: (id: string, expanded: boolean) => void
 }
