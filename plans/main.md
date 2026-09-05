@@ -56,10 +56,13 @@ Terminology:
 |---|---|---|
 | `widgets` | `Widgets` (via `defineWidgets`) | registry `{ [key]: { component, tab?, title? } }` — single source of truth |
 | `layout` | `Dockview JSON` (`toJSON`/`fromJSON` shape) | default + saved/reloaded config; `bind:` for persistence |
-| `handle` | `DockviewHandle` | `bind:handle` → `{ api, openPanel, registerWidget }` |
+| `handle` | `DockviewHandle` | `bind:handle` → `{ api, openPanel, registerWidget, float, popout, dockAll }` |
 | `active` | `ActiveState` | `bind:active` → reactive `{ panel, group }` of the active panel/group |
+| `floating` | `FloatingState` | `bind:floating` → reactive `{ count, hasFloating }` of open floating windows |
+| `popout` | `PopoutState` | `bind:popout` → reactive `{ count, hasPopout }` of open popout windows |
 | `options` | `DockviewComponentOptions` passthrough | theme, keyboard, history, edge groups, etc. |
 | `watermark` | `WatermarkComponent` (`{ openPanel }`) | Svelte empty-state overlay, no `IWatermarkRenderer` factory |
+| `leftHeaderActions` / `rightHeaderActions` / `prefixHeaderActions` | `HeaderActionComponent` (`{ containerApi, group, state }`) | Svelte group-header slots; win over raw `options` factories |
 | events | `onReady`, `onDid*` passthrough | bridged without re-render loops |
 
 Imperative control goes through the bound handle:
@@ -176,7 +179,7 @@ src/routes/+page.svelte        # demo index (links only; nav lives in the layout
 ## 10. Testing
 
 - Unit (`vitest`, jsdom): `registry`, `utils`, `factory`, `context` — 22 tests, done.
-- E2E (`@playwright/test`, `src/routes` demo gallery): 8 tests over landing + `/demos/*`, done.
+- E2E (`@playwright/test`, `src/routes` demo gallery): 11 tests over landing + `/demos/*`, done.
 - The browser-component tier (`vitest-browser-svelte`) is folded into Playwright; the "drag does not reset state" assertion is excluded as flaky.
 
 Scripts: `test:unit` and `test:e2e` are wired in `package.json` + `vitest.config.ts` / `playwright.config.ts`.

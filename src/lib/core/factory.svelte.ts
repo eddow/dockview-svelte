@@ -1,9 +1,12 @@
 import type {
 	CreateComponentOptions,
+	DockviewGroupPanel,
 	DockviewIDisposable,
 	DockviewPanelApi,
 	GroupPanelPartInitParameters,
 	IContentRenderer,
+	IGroupHeaderProps,
+	IHeaderActionsRenderer,
 	ITabRenderer,
 	PanelUpdateEvent,
 	Parameters,
@@ -13,7 +16,7 @@ import { mount, unmount } from 'svelte'
 import DefaultTab from '../components/DefaultTab.svelte'
 import { DOCKVIEW_CONTEXT_KEY, type DockviewContext } from './context.js'
 import type { WidgetRegistry } from './registry.js'
-import type { PanelState } from './types.js'
+import type { GroupState, HeaderActionComponent, PanelState } from './types.js'
 import { deepEqual, mergeInto } from './utils.js'
 
 /**
@@ -26,10 +29,18 @@ interface PanelEntry {
 	tabDisposed: boolean
 }
 
+/** Header slot served by {@link createHeaderActionFactories}. */
+export type HeaderActionSlot = 'left' | 'right' | 'prefix'
+
 /** The renderer factories returned by {@link createDockviewFactory}. */
 export interface DockviewFactory {
 	createComponent: (options: CreateComponentOptions) => IContentRenderer
 	createTabComponent: (options: CreateComponentOptions) => ITabRenderer
+	/** Svelte-backed group-header action factories (left/right/prefix slots). */
+	createHeaderActionFactories: Record<
+		HeaderActionSlot,
+		((group: DockviewGroupPanel) => IHeaderActionsRenderer) | undefined
+	>
 	/** Access a panel's shared state by id (used by `openPanel` to build the handle). */
 	getState: (id: string) => PanelState | undefined
 }
@@ -67,7 +78,8 @@ function createPanelState(api: DockviewPanelApi, params: Parameters, title: stri
 
 export function createDockviewFactory(
 	registry: WidgetRegistry,
-	context?: DockviewContext
+	context?: DockviewContext,
+	headerActions?: Record<HeaderActionSlot, HeaderActionComponent | undefined>
 ): DockviewFactory {
 	const panels = new Map<string, PanelEntry>()
 
@@ -254,9 +266,64 @@ export function createDockviewFactory(
 		}
 	}
 
+	function createHeaderActionFactory(
+		slot: HeaderActionSlot,
+		slotComponent: HeaderActionComponent | undefined
+	): ((group: DockviewGroupPanel) => IHeaderActionsRenderer) | undefined {
+		if (!slotComponent) return undefined
+		return (group: DockviewGroupPanel): IHeaderActionsRenderer => {
+			const element = document.createElement('div')
+			element.className = `dv-svelte-header-actions dv-svelte-header-actions--${slot}`
+			let instance: Record<string, unknown> | undefined
+			let disposables: DockviewIDisposable[] = []
+
+			// Reactive group-state mirror — the same idiom as PanelState.
+			const state: GroupState = $state({
+				isCollapsed: group.api.isCollapsed(),
+				isPeeking: group.api.isPeeking(),
+				location: group.api.location,
+			})
+
+			return {
+				element,
+				init(params: IGroupHeaderProps): void {
+					disposables.push(
+						group.api.onDidCollapsedChange((event) => {
+							state.isCollapsed = event.isCollapsed
+						}),
+						group.api.onDidPeekChange((event) => {
+							state.isPeeking = event.isPeeking
+						}),
+						group.api.onDidLocationChange((event) => {
+							state.location = event.location
+						})
+					)
+					instance = mount(slotComponent, {
+						target: element,
+						props: { containerApi: params.containerApi, group, state },
+						...(context ? { context: new Map([[DOCKVIEW_CONTEXT_KEY, context]]) } : {}),
+					}) as Record<string, unknown>
+				},
+				dispose(): void {
+					for (const disposable of disposables) disposable.dispose()
+					disposables = []
+					if (instance) {
+						unmount(instance)
+						instance = undefined
+					}
+				},
+			}
+		}
+	}
+
 	return {
 		createComponent: createContentRenderer,
 		createTabComponent: createTabRenderer,
+		createHeaderActionFactories: {
+			left: createHeaderActionFactory('left', headerActions?.left),
+			right: createHeaderActionFactory('right', headerActions?.right),
+			prefix: createHeaderActionFactory('prefix', headerActions?.prefix),
+		},
 		getState: (id: string) => panels.get(id)?.state,
 	}
 }

@@ -125,6 +125,9 @@ panel.api.setTitle('Renamed');
 
 - `handle.api` — the raw `DockviewApi` (`fromJSON`, `addFloatingGroup`, `undo`, …).
 - `handle.registerWidget(key, def)` — register/override a widget at runtime without touching the `widgets` prop.
+- `handle.float(target, options?)` — float an existing panel or group (`IDockviewPanel`, `DockviewGroupPanel`, or panel id string).
+- `handle.popout(target, options?)` — pop a panel or group into its own browser window; resolves `true`/`false`.
+- `handle.dockAll()` — dock every floating window back into the main grid.
 - `handle.openPanel` throws for unknown widget keys and before mount.
 
 ## Layout persistence
@@ -195,6 +198,76 @@ let active = $state<ActiveState>({ panel: undefined, group: undefined });
 
 For a widget reacting to its *own* activation, prefer `state.active` (writable).
 
+## Floating windows
+
+`bind:floating` mirrors the open floating windows reactively (`{ count, hasFloating }`) —
+dragging, floating, or docking back all update it:
+
+```ts
+import type { FloatingState } from 'dockview-svelte';
+let floating = $state<FloatingState>({ count: 0, hasFloating: false });
+```
+
+```svelte
+<Dockview bind:floating {widgets} />
+<!-- floating.count / floating.hasFloating update reactively -->
+```
+
+```ts
+handle.float(panelId); // float an existing panel or group
+handle.float(panel.api.group); // same via the group object
+handle.dockAll(); // dock everything back
+```
+
+Popouts mirror floating, via `bind:popout` and `handle.popout()`:
+
+```ts
+import type { PopoutState } from 'dockview-svelte';
+let popout = $state<PopoutState>({ count: 0, hasPopout: false });
+
+handle.popout(panelId); // -> Promise<boolean>, resolves false if the window failed
+```
+
+```svelte
+<Dockview bind:floating bind:popout {widgets} />
+```
+
+See `/demos/floating` for a live example — each group header (via
+`rightHeaderActions`) and each panel tab carries ⧉ float / ↗ popout buttons.
+
+## Group header actions
+
+Svelte components rendered into dockview's group-header slots — left of tabs,
+right of tabs, or before everything. Each receives `{ containerApi, group, state }`
+per group (mirroring dockview's `IGroupHeaderProps`, plus a reactive `state`);
+set props win over the raw `options` factories:
+
+```svelte
+<script lang="ts">
+	import type { HeaderActionProps } from 'dockview-svelte';
+
+	// `group` is the concrete DockviewGroupPanel — no interface re-resolution.
+	let { containerApi, group, state }: HeaderActionProps = $props();
+</script>
+
+<button onclick={() => containerApi.addFloatingGroup(group)}>float</button>
+{#if state.isCollapsed}
+	<span>collapsed</span>
+{/if}
+```
+
+```svelte
+<Dockview {widgets} rightHeaderActions={GroupActions} options={{ theme }} />
+```
+
+`state` is a reactive `GroupState` mirror (`isCollapsed`, `isPeeking`, `location`),
+kept in sync with the group api's `onDid*` events — the same idiom as `PanelState`.
+
+Panel-header (per-tab) buttons need no new API — a custom `tab` component already
+receives the shared `state` (with `state.api.id`), and reads the parent api via
+`getContext(DOCKVIEW_CONTEXT_KEY)` to call `addFloatingGroup` / `addPopoutGroup`.
+See `/demos/floating` (`GroupHeaderActions.svelte` + `PanelHeaderTab.svelte`).
+
 ## Themes
 
 Themes are plain objects from the `dockview` package — already installed, no extra setup:
@@ -230,12 +303,13 @@ The component renders an empty `<div>` on the server and instantiates `DockviewC
 
 | Export | Kind | Notes |
 | ------ | ---- | ----- |
-| `Dockview` | Component | `widgets`, `options`, `bind:layout`, `bind:handle`, `bind:active` |
+| `Dockview` | Component | `widgets`, `options`, `bind:layout`, `bind:handle`, `bind:active`, `bind:floating`, `bind:popout`, `watermark`, `left/right/prefixHeaderActions` |
 | `DefaultTab` | Component | Built-in header (title + close) |
 | `defineWidgets` / `WidgetRegistry` | Function / class | Typed registry construction / mutable registry |
 | `DOCKVIEW_CONTEXT_KEY` / `DockviewContext` | const / type | `api` + `registerWidget` for descendants |
 | `WatermarkComponent` / `WatermarkProps` | types | `watermark` prop: `{ openPanel }` |
-| `PanelState`, `PanelHandle`, `DockviewHandle`, `ActiveState` | Types | Shared state, open result, bound handle, active panel/group |
+| `HeaderActionComponent` / `HeaderActionProps` | types | header-action props: `{ containerApi, group, state }` |
+| `PanelState`, `PanelHandle`, `DockviewHandle`, `ActiveState`, `FloatingState`, `PopoutState`, `GroupState` | Types | Shared state, open result, bound handle, active panel/group, floating/popout windows, group header state |
 | `WidgetDefinition`, `Widgets`, `WidgetComponent`, `ParamsOf`, `OpenPanelOptions`, `OpenPanelFn` | Types | Registry and open typings |
 
 ## Developing
@@ -244,8 +318,8 @@ The component renders an empty `<div>` on the server and instantiates `DockviewC
 npm run dev          # demo gallery (landing + /demos/*)
 npm run check        # svelte-check
 npm run biome        # lint + format check
-npm run test:unit    # vitest (registry, utils, factory)
-npm run test:e2e     # playwright (8 tests over the demo gallery)
+npm run test:unit    # vitest (registry, utils, factory, context)
+npm run test:e2e     # playwright (11 tests over the demo gallery)
 npm run prepack      # svelte-package + publint
 ```
 
@@ -262,7 +336,10 @@ highlighted source (Shiki, display-only):
 | `/demos/layout` | save / restore `bind:layout` |
 | `/demos/themes` | theme switching (`abyss`/`dark`/`light`/`dracula`) |
 | `/demos/events` | `bind:active` + event log |
+| `/demos/floating` | `bind:floating` / `bind:popout` + group header float/popout |
+| `/demos/empty` | `watermark` empty-state overlay |
 | `/demos/empty` | empty state (`watermark` prop) |
+| `/demos/floating` | floating windows (`bind:floating`, `handle.float`/`dockAll`, header + tab float/popout buttons) |
 
 ## License
 

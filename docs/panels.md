@@ -417,6 +417,45 @@ a raw passthrough for imperative users; the prop is the Svelte-native path.
 `/demos/empty` covers it live: the watermark button opens a panel, `api.clear()`
 restores the empty state.
 
+## 13. Floating & popout windows (`bind:floating`/`bind:popout`, `handle.float`/`popout`/`dockAll`)
+
+`bind:floating` exposes `{ count, hasFloating }`; `bind:popout` exposes
+`{ count, hasPopout }`. Both are derived cheaply from the live api — floating
+from `api.groups.filter(g => g.api.location.type === 'floating')`, popout from
+`api.getPopouts()` — refreshed on layout/add/remove/move/FromJSON (and popout
+add/remove), so user drags update them with no extra wiring and no
+`toJSON()` churn.
+
+`handle.float(target, options?)` floats an existing panel or group
+(`IDockviewPanel`, `DockviewGroupPanel`, or panel id string) via
+`api.addFloatingGroup`; `handle.popout(target, options?)` mirrors it via
+`api.addPopoutGroup` (resolves `Promise<boolean>`); `handle.dockAll()` moves
+every non-grid panel back into the first grid group via `panel.api.moveTo`
+(targeting `api.groups` naively would move into a floating group — a no-op).
+Opening floating directly still works through `openPanel({ floating: { x, y,
+width, height } })` passthrough. `/demos/floating` covers all paths live, plus
+header/tab buttons (see §14).
+
+## 14. Group header actions (`left/right/prefixHeaderActions`)
+
+Svelte components rendered into dockview's group-header slots via the
+`createLeft/Right/PrefixHeaderActionComponent` factories (owned by the library
+when the props are set — Svelte components win over the raw `options`
+factories). Each receives `{ containerApi, group, state }` per group: `group`
+is the **concrete** `DockviewGroupPanel` (`.api`, `.id`, `.panels`), `state` is
+a reactive `GroupState` mirror (`isCollapsed`, `isPeeking`, `location`) driven
+by the group api's `onDid*` events, and the factory mounts with the parent
+`DockviewContext` so `getContext` also works. Because `group` is concrete,
+`containerApi.addFloatingGroup(group)` / `addPopoutGroup(group)` work directly —
+no interface re-resolution.
+
+Per-tab (panel-header) buttons need no new API: a custom `tab` component
+already receives the shared `state` (with `state.api.id`) and reads the parent
+api via `getContext(DOCKVIEW_CONTEXT_KEY)` → `api.getPanel(state.api.id)` →
+`addFloatingGroup`/`addPopoutGroup`. `/demos/floating` wires both:
+`rightHeaderActions={GroupHeaderActions}` (⧉/↗ per group) + `tab:
+PanelHeaderTab` (⧉/↗ per panel).
+
 ## 9. Title fallback (resolved)
 
 There is **no global `defaultTitle` prop** — a single shared fallback for all

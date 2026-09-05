@@ -1,51 +1,53 @@
 <script lang="ts">
-	import 'dockview/dist/styles/dockview.css'
-	import '../app.css'
-	import type { Snippet } from 'svelte'
-	import { page } from '$app/state'
-	import Code from './demos/Code.svelte'
+import 'dockview/dist/styles/dockview.css'
+import '../app.css'
+import type { Snippet } from 'svelte'
+import { page } from '$app/state'
+import Code from './demos/Code.svelte'
 
-	let { children }: { children: Snippet } = $props()
+let { children }: { children: Snippet } = $props()
 
-	const demos = [
-		{ href: '/demos/basic', label: 'Basic: open a widget' },
-		{ href: '/demos/params', label: 'Reactive params (two-way)' },
-		{ href: '/demos/custom-tab', label: 'Custom tab + shared state' },
-		{ href: '/demos/layout', label: 'Save / restore bind:layout' },
-		{ href: '/demos/themes', label: 'Themes' },
-		{ href: '/demos/events', label: 'bind:active + events' },
-		{ href: '/demos/empty', label: 'Empty state (watermark)' }
-	] as const
+const demos = [
+	{ href: '/demos/basic', label: 'Basic: open a widget' },
+	{ href: '/demos/params', label: 'Reactive params (two-way)' },
+	{ href: '/demos/custom-tab', label: 'Custom tab + shared state' },
+	{ href: '/demos/layout', label: 'Save / restore bind:layout' },
+	{ href: '/demos/themes', label: 'Themes' },
+	{ href: '/demos/events', label: 'bind:active + events' },
+	{ href: '/demos/empty', label: 'Empty state (watermark)' },
+	{ href: '/demos/floating', label: 'Floating groups' },
+] as const
 
-	const pageSources = import.meta.glob('./demos/*/+page.svelte', {
-		query: '?raw',
-		import: 'default',
-		eager: true
-	}) as Record<string, string>
+const pageSources = import.meta.glob('./demos/*/+page.svelte', {
+	query: '?raw',
+	import: 'default',
+	eager: true,
+}) as Record<string, string>
 
-	const widgetSources = import.meta.glob('./demos/_widgets/*.svelte', {
-		query: '?raw',
-		import: 'default',
-		eager: true
-	}) as Record<string, string>
+const widgetSources = import.meta.glob('./demos/_widgets/*.svelte', {
+	query: '?raw',
+	import: 'default',
+	eager: true,
+}) as Record<string, string>
 
-	const demoWidgets: Record<string, string[]> = {
-		'/demos/basic': ['BasicPanel.svelte'],
-		'/demos/params': ['CounterPanel.svelte'],
-		'/demos/custom-tab': ['InboxPanel.svelte', 'BadgeTab.svelte'],
-		'/demos/layout': ['BasicPanel.svelte'],
-		'/demos/themes': ['BasicPanel.svelte'],
-		'/demos/events': ['BasicPanel.svelte'],
-		'/demos/empty': ['BasicPanel.svelte', 'EmptyWatermark.svelte']
-	}
+const demoWidgets: Record<string, string[]> = {
+	'/demos/basic': ['BasicPanel.svelte'],
+	'/demos/params': ['CounterPanel.svelte'],
+	'/demos/custom-tab': ['InboxPanel.svelte', 'BadgeTab.svelte'],
+	'/demos/layout': ['BasicPanel.svelte'],
+	'/demos/themes': ['BasicPanel.svelte'],
+	'/demos/events': ['BasicPanel.svelte'],
+	'/demos/empty': ['BasicPanel.svelte', 'EmptyWatermark.svelte'],
+	'/demos/floating': ['BasicPanel.svelte', 'GroupHeaderActions.svelte', 'PanelHeaderTab.svelte'],
+}
 
-	let pathname = $derived(page.url.pathname)
-	let pageSource = $derived(pageSources[`.${pathname}/+page.svelte`])
-	let widgetCodes = $derived(
-		(demoWidgets[pathname] ?? [])
-			.map((file) => ({ file, code: widgetSources[`./demos/_widgets/${file}`] }))
-			.filter((w) => w.code)
-	)
+let pathname = $derived(page.url.pathname)
+let pageSource = $derived(pageSources[`.${pathname}/+page.svelte`])
+let widgetCodes = $derived(
+	(demoWidgets[pathname] ?? [])
+		.map((file) => ({ file, code: widgetSources[`./demos/_widgets/${file}`] }))
+		.filter((w) => w.code)
+)
 </script>
 
 <header>

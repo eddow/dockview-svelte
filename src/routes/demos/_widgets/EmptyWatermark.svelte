@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { DockviewHandle } from '$lib/index.js'
+import type { DockviewHandle } from '$lib/index.js'
 
-	let { openPanel }: { openPanel: DockviewHandle['openPanel'] } = $props()
+let { openPanel }: { openPanel: DockviewHandle['openPanel'] } = $props()
 </script>
 
 <div class="watermark">

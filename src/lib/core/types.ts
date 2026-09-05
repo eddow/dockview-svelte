@@ -1,8 +1,11 @@
 import type {
 	AddPanelOptions,
 	DockviewApi,
+	DockviewGroupLocation,
 	DockviewGroupPanel,
 	DockviewPanelApi,
+	DockviewPopoutGroupOptions,
+	FloatingGroupOptions,
 	IDockviewPanel,
 } from 'dockview'
 import type { Component, ComponentProps } from 'svelte'
@@ -54,6 +57,43 @@ export interface ActiveState {
 	group: DockviewGroupPanel | undefined
 }
 
+/**
+ * Reactive floating-window state, bound via `bind:floating` on `<Dockview>`.
+ * Mirrors `api.groups` where `location.type === 'floating'` — refreshed on
+ * layout/add/remove/move, so dragging, floating, or docking back all update it.
+ */
+export interface FloatingState {
+	/** Number of floating windows currently open. */
+	count: number
+	/** True when at least one floating window is open. */
+	hasFloating: boolean
+}
+
+/**
+ * Reactive popout-window state, bound via `bind:popout` on `<Dockview>`.
+ * Mirrors `api.getPopouts()` — refreshed on popout add/remove and layout changes.
+ */
+export interface PopoutState {
+	/** Number of popout windows currently open. */
+	count: number
+	/** True when at least one popout window is open. */
+	hasPopout: boolean
+}
+
+/**
+ * Reactive group state, passed to a Svelte group-header action component via
+ * `HeaderActionProps.state`. Mirrors the group api's collapsed/peek/location
+ * (and their `onDid*` events) — the same idiom as {@link PanelState}.
+ */
+export interface GroupState {
+	/** True while the group is collapsed to its header. */
+	isCollapsed: boolean
+	/** True while the group is peeking (edge/tool window). */
+	isPeeking: boolean
+	/** The group's current location: `'grid'`, `'floating'`, `'popout'`, or `'edge'`. */
+	location: DockviewGroupLocation
+}
+
 /** A widget receives its whole {@link PanelState} as a single `state` prop. */
 export type WidgetComponent<P = Record<string, unknown>> = Component<{
 	state: PanelState<P>
@@ -76,6 +116,26 @@ export interface WatermarkProps<W extends Widgets = Widgets> {
  * the overlay always passes this dock's typed `openPanel` at runtime.
  */
 export type WatermarkComponent = Component<any>
+
+/**
+ * Props passed to a Svelte group-header action component
+ * (`leftHeaderActions` / `rightHeaderActions` / `prefixHeaderActions`).
+ * Mirrors dockview's `IGroupHeaderProps`, plus a reactive {@link GroupState}.
+ */
+export interface HeaderActionProps {
+	/** The parent {@link DockviewApi} (`addFloatingGroup`, `addPopoutGroup`, …). */
+	containerApi: DockviewApi
+	/** The concrete group these actions render for (`.api`, `.id`, `.panels`, …). */
+	group: DockviewGroupPanel
+	/** Reactive mirror of the group's collapsed/peek/location state. */
+	state: GroupState
+}
+
+/**
+ * A Svelte component rendered into a group header slot.
+ * `any` props for the same variance reason as {@link WatermarkComponent}.
+ */
+export type HeaderActionComponent = Component<any>
 
 /**
  * Extracts the params type of a widget component from its `state` prop.
@@ -136,4 +196,23 @@ export interface DockviewHandle<W extends Widgets = Widgets> {
 	openPanel: OpenPanelFn<W>
 	/** Register (or override) a widget type at runtime. */
 	registerWidget: (key: string, def: WidgetDefinition) => void
+	/**
+	 * Float an existing panel or group into its own window.
+	 * Accepts an `IDockviewPanel`, a `DockviewGroupPanel`, or a panel id string.
+	 */
+	float: (
+		target: IDockviewPanel | DockviewGroupPanel | string,
+		options?: FloatingGroupOptions
+	) => void
+	/**
+	 * Pop an existing panel or group out into its own browser window.
+	 * Accepts an `IDockviewPanel`, a `DockviewGroupPanel`, or a panel id string.
+	 * Resolves `true` on success, `false` if the popout window failed to open.
+	 */
+	popout: (
+		target: IDockviewPanel | DockviewGroupPanel | string,
+		options?: DockviewPopoutGroupOptions
+	) => Promise<boolean>
+	/** Dock every floating window back into the main grid. */
+	dockAll: () => void
 }

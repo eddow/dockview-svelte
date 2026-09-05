@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { themeAbyss } from 'dockview'
-	import { Dockview, type DockviewHandle, defineWidgets } from '$lib/index.js'
-	import BasicPanel from '../_widgets/BasicPanel.svelte'
-	import EmptyWatermark from '../_widgets/EmptyWatermark.svelte'
+import { themeAbyss } from 'dockview'
+import { Dockview, type DockviewHandle, defineWidgets } from '$lib/index.js'
+import BasicPanel from '../_widgets/BasicPanel.svelte'
+import EmptyWatermark from '../_widgets/EmptyWatermark.svelte'
 
-	const widgets = defineWidgets({
-		a: { component: BasicPanel, title: 'A' }
-	})
+const widgets = defineWidgets({
+	a: { component: BasicPanel, title: 'A' },
+})
 
-	let handle = $state<DockviewHandle<typeof widgets> | undefined>(undefined)
+let handle = $state<DockviewHandle<typeof widgets> | undefined>(undefined)
 </script>
 
 <svelte:head><title>Empty state — dockview-svelte demos</title></svelte:head>

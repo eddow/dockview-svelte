@@ -11,6 +11,7 @@ test('landing page links all demos', async ({ page }) => {
 		'Themes',
 		'bind:active',
 		'Empty state',
+		'Floating groups',
 	]) {
 		await expect(page.getByRole('link', { name })).toBeVisible()
 	}
@@ -75,6 +76,46 @@ test('events demo tracks bind:active and event log', async ({ page }) => {
 	await expect(page.getByText('active panel: b-1')).toBeVisible()
 	await expect(page.getByText('added a-1')).toBeVisible()
 	await expect(page.getByText('added b-1')).toBeVisible()
+})
+
+test('floating demo opens a floating window via openPanel passthrough', async ({ page }) => {
+	await page.goto('/demos/floating')
+
+	await expect(page.getByRole('tab', { name: 'A' }).first()).toBeVisible()
+	await expect(page.getByText('floating groups: 0')).toBeVisible()
+	await page.getByRole('button', { name: 'open floating' }).click()
+	await expect(page.getByText('floating groups: 1')).toBeVisible()
+	await expect(page.getByRole('tab', { name: 'Floating A' })).toBeVisible()
+})
+
+test('floating demo floats an existing panel and docks back', async ({ page }) => {
+	await page.goto('/demos/floating')
+
+	await expect(page.getByText('floating groups: 0')).toBeVisible()
+	await page.getByRole('button', { name: 'float panel A' }).click()
+	await expect(page.getByText('floating groups: 1')).toBeVisible()
+	await page.getByRole('button', { name: 'dock all' }).click()
+	await expect(page.getByText('floating groups: 0')).toBeVisible()
+})
+
+test('floating demo header actions float via group and tab buttons', async ({ page }) => {
+	await page.goto('/demos/floating')
+
+	await expect(page.getByText('floating groups: 0')).toBeVisible()
+	// Group header slot (rightHeaderActions) renders per group.
+	await expect(page.getByRole('button', { name: 'Float group' }).first()).toBeVisible()
+	await expect(page.getByRole('button', { name: 'Popout group' }).first()).toBeVisible()
+	// Panel header (custom tab) carries per-panel float/popout buttons.
+	await expect(page.getByRole('button', { name: 'Float panel' }).first()).toBeVisible()
+	await expect(page.getByRole('button', { name: 'Popout panel' }).first()).toBeVisible()
+	// Tab float button floats its panel → reactive count updates.
+	await page.getByRole('button', { name: 'Float panel' }).first().click()
+	await expect(page.getByText('floating groups: 1')).toBeVisible()
+	await page.getByRole('button', { name: 'dock all' }).click()
+	await expect(page.getByText('floating groups: 0')).toBeVisible()
+	// Group header float button floats the whole group.
+	await page.getByRole('button', { name: 'Float group' }).first().click()
+	await expect(page.getByText('floating groups: 1')).toBeVisible()
 })
 
 test('empty demo shows watermark and opens from it', async ({ page }) => {
