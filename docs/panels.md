@@ -400,8 +400,22 @@ case of a *widget* reacting to its own activation, prefer `state.active`
   component strings, `fromJSON`, `addFloatingGroup`, `removePanel`, …).
 - `openPanel` passes through all unowned `AddPanelOptions`.
 - `registerWidget` adds types at runtime without touching the initial registry.
+- The factory forwards the parent `DockviewContext` to every widget mount via
+  Svelte's `mount` `context` option, so widgets read it with
+  `getContext(DOCKVIEW_CONTEXT_KEY)` (covered by `core/context.test.ts`).
 - The deferred `<DvWidgets>` snippet path slots into the same `registerWidget`
   hole — nothing here forecloses it.
+
+## 12. Empty state (watermark)
+
+With no panels open, `Dockview` shows the `watermark` prop — a plain Svelte
+component receiving `{ openPanel }` (`WatermarkProps`). It renders as a child
+overlay (absolute, above the empty grid) when `api.panels.length === 0`, so no
+dockview `IWatermarkRenderer` factory is involved and context flows
+automatically like any Svelte child. `options.createWatermarkComponent` stays
+a raw passthrough for imperative users; the prop is the Svelte-native path.
+`/demos/empty` covers it live: the watermark button opens a panel, `api.clear()`
+restores the empty state.
 
 ## 9. Title fallback (resolved)
 

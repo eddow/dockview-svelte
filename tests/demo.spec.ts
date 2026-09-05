@@ -10,6 +10,7 @@ test('landing page links all demos', async ({ page }) => {
 		'bind:layout',
 		'Themes',
 		'bind:active',
+		'Empty state',
 	]) {
 		await expect(page.getByRole('link', { name })).toBeVisible()
 	}
@@ -74,4 +75,17 @@ test('events demo tracks bind:active and event log', async ({ page }) => {
 	await expect(page.getByText('active panel: b-1')).toBeVisible()
 	await expect(page.getByText('added a-1')).toBeVisible()
 	await expect(page.getByText('added b-1')).toBeVisible()
+})
+
+test('empty demo shows watermark and opens from it', async ({ page }) => {
+	await page.goto('/demos/empty')
+
+	const watermarkText = page.locator('.dv-svelte-watermark-overlay p')
+	await expect(watermarkText).toBeVisible()
+	// The watermark button sits in an overlay (Playwright actionability
+	// check fails) — dispatch the click directly instead.
+	await page.locator('.dv-svelte-watermark-overlay button').dispatchEvent('click')
+	await expect(page.getByRole('tab', { name: 'A' })).toBeVisible()
+	await page.getByRole('button', { name: 'close all' }).click()
+	await expect(watermarkText).toBeVisible()
 })

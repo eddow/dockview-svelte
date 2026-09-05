@@ -16,6 +16,8 @@ export type {
 	PanelHandle,
 	PanelState,
 	ParamsOf,
+	WatermarkComponent,
+	WatermarkProps,
 	WidgetComponent,
 	WidgetDefinition,
 	Widgets,

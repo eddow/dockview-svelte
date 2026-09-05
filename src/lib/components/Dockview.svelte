@@ -38,6 +38,7 @@
 		OpenPanelOptions,
 		PanelHandle,
 		ParamsOf,
+		WatermarkComponent,
 		WidgetDefinition,
 		Widgets
 	} from '$lib/core/types.js'
@@ -61,6 +62,12 @@
 		 * string key and works with the registry as-is.)
 		 */
 		options?: Omit<DockviewComponentOptions, 'createComponent' | 'createTabComponent'>
+		/**
+		 * Svelte empty-state overlay, rendered as a plain child when the dock has
+		 * no panels. Receives `{ openPanel }` — no `IWatermarkRenderer` factory
+		 * involved, so it gets context automatically like any Svelte child.
+		 */
+		watermark?: WatermarkComponent
 		/** `bind:layout` — dockview JSON (`toJSON`/`fromJSON` shape). */
 		layout?: SerializedDockview
 		/** `bind:handle` — `{ api, openPanel, registerWidget }`. */
@@ -109,6 +116,7 @@
 	let {
 		widgets = {} as W,
 		options = {},
+		watermark,
 		layout = $bindable(),
 		handle = $bindable(),
 		active = $bindable({ panel: undefined, group: undefined }),
@@ -153,6 +161,8 @@
 	let component: DockviewComponent | undefined
 	let factory: DockviewFactory | undefined
 	let api = $state<DockviewApi | undefined>(undefined)
+	/** Panel count mirror — drives the Svelte `watermark` overlay. */
+	let panelCount = $state(0)
 
 	const registry = new WidgetRegistry()
 	const counters = new Map<string, number>()
@@ -239,7 +249,7 @@
 	})
 
 	onMount(() => {
-		factory = createDockviewFactory(registry)
+		factory = createDockviewFactory(registry, context)
 		const created = new DockviewComponent(container, {
 			...options,
 			createComponent: factory.createComponent,
@@ -255,6 +265,7 @@
 		component = created
 		api = created.api
 		context.api = created.api
+		panelCount = created.api.panels.length
 
 		const createdHandle: DockviewHandle<W> = {
 			api: created.api,
@@ -275,10 +286,17 @@
 				onDidLayoutChange?.()
 			}),
 			apiHandle.onDidLayoutFromJSON(() => {
+				panelCount = apiHandle.panels.length
 				onDidLayoutFromJSON?.()
 			}),
-			apiHandle.onDidAddPanel((panel) => onDidAddPanel?.(panel)),
-			apiHandle.onDidRemovePanel((panel) => onDidRemovePanel?.(panel)),
+			apiHandle.onDidAddPanel((panel) => {
+				panelCount = apiHandle.panels.length
+				onDidAddPanel?.(panel)
+			}),
+			apiHandle.onDidRemovePanel((panel) => {
+				panelCount = apiHandle.panels.length
+				onDidRemovePanel?.(panel)
+			}),
 			apiHandle.onDidAddGroup((group) => onDidAddGroup?.(group)),
 			apiHandle.onDidRemoveGroup((group) => onDidRemoveGroup?.(group)),
 			apiHandle.onDidActivePanelChange((event) => {
@@ -328,11 +346,24 @@
 	})
 </script>
 
-<div class="dv-svelte-root {className}" bind:this={container}></div>
+<div class="dv-svelte-root {className}" bind:this={container}>
+	{#if watermark && panelCount === 0 && handle}
+		{@const Watermark = watermark}
+		<div class="dv-svelte-watermark-overlay">
+			<Watermark openPanel={handle.openPanel} />
+		</div>
+	{/if}
+</div>
 
 <style>
 	.dv-svelte-root {
 		width: 100%;
 		height: 100%;
+		position: relative;
+	}
+	.dv-svelte-watermark-overlay {
+		position: absolute;
+		inset: 0;
+		z-index: 1;
 	}
 </style>

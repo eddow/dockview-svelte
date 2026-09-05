@@ -11,6 +11,7 @@ import type {
 } from 'dockview'
 import { mount, unmount } from 'svelte'
 import DefaultTab from '../components/DefaultTab.svelte'
+import { DOCKVIEW_CONTEXT_KEY, type DockviewContext } from './context.js'
 import type { WidgetRegistry } from './registry.js'
 import type { PanelState } from './types.js'
 import { deepEqual, mergeInto } from './utils.js'
@@ -39,6 +40,12 @@ export interface DockviewFactory {
  * The content renderer owns the {@link PanelState} (created here as `$state`) and
  * its reactivity wiring: the title mirror and the params double-bind. The tab
  * renderer only mounts its header component against the same state object.
+ *
+ * Both mounts forward the parent `DockviewContext` via Svelte's `mount`
+ * `context` option, so widgets can `getContext(DOCKVIEW_CONTEXT_KEY)`.
+ *
+ * The empty-state `watermark` is NOT a factory: `Dockview.svelte` renders it
+ * as a plain Svelte child overlay when empty, so it gets context automatically.
  */
 /** Create a `$state`-wrapped panel state. `$state` must be a declaration initializer. */
 function createPanelState(api: DockviewPanelApi, params: Parameters, title: string): PanelState {
@@ -58,7 +65,10 @@ function createPanelState(api: DockviewPanelApi, params: Parameters, title: stri
 	return state
 }
 
-export function createDockviewFactory(registry: WidgetRegistry): DockviewFactory {
+export function createDockviewFactory(
+	registry: WidgetRegistry,
+	context?: DockviewContext
+): DockviewFactory {
 	const panels = new Map<string, PanelEntry>()
 
 	function getOrCreateState(api: DockviewPanelApi, params: Parameters, title: string): PanelEntry {
@@ -103,6 +113,7 @@ export function createDockviewFactory(registry: WidgetRegistry): DockviewFactory
 				instance = mount(def.component, {
 					target: element,
 					props: { state },
+					...(context ? { context: new Map([[DOCKVIEW_CONTEXT_KEY, context]]) } : {}),
 				}) as Record<string, unknown>
 
 				lastParams = $state.snapshot(state.params)
@@ -226,6 +237,7 @@ export function createDockviewFactory(registry: WidgetRegistry): DockviewFactory
 				instance = mount(tabComponent, {
 					target: element,
 					props: { state },
+					...(context ? { context: new Map([[DOCKVIEW_CONTEXT_KEY, context]]) } : {}),
 				}) as Record<string, unknown>
 			},
 

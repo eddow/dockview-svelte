@@ -152,6 +152,33 @@ All 33 `DockviewApi` events are forwarded as component props (subscribed on moun
 <Dockview {widgets} onDidActivePanelChange={(e) => console.log(e.panel?.id)} />
 ```
 
+## Empty state (watermark)
+
+With no panels open, `Dockview` shows the `watermark` prop — a plain Svelte
+component receiving `{ openPanel }`. No dockview `IWatermarkRenderer` factory
+involved; it renders as a child overlay, so it gets context automatically:
+
+```svelte
+<script lang="ts">
+	import type { WatermarkProps } from 'dockview-svelte';
+
+	let { openPanel }: WatermarkProps = $props();
+</script>
+
+<button onclick={() => openPanel('chat', { params: { room: 'general' } })}>
+	open panel
+</button>
+```
+
+```svelte
+<Dockview {widgets} watermark={EmptyWatermark} options={{ theme }} />
+```
+
+See `/demos/empty` for a live example (watermark button opens a panel).
+
+> Tab context menus (`getTabContextMenuItems`) also pass through `options`, but
+> need the `ContextMenu` module from `dockview-enterprise` — not covered here.
+
 ## Active panel / group
 
 `bind:active` exposes the current active panel + group as a reactive object:
@@ -191,6 +218,8 @@ const ctx = getContext<DockviewContext>(DOCKVIEW_CONTEXT_KEY);
 ctx.registerWidget('extra', { component: ExtraPanel });
 ```
 
+The factory forwards this context to every widget mount, so `getContext` works
+inside panel content and tabs (covered by `core/context.test.ts`).
 This is the hook a future `<DvWidgets>` slot-forwarder will build on (deferred — see `plans/main.md`).
 
 ## SSR
@@ -205,6 +234,7 @@ The component renders an empty `<div>` on the server and instantiates `DockviewC
 | `DefaultTab` | Component | Built-in header (title + close) |
 | `defineWidgets` / `WidgetRegistry` | Function / class | Typed registry construction / mutable registry |
 | `DOCKVIEW_CONTEXT_KEY` / `DockviewContext` | const / type | `api` + `registerWidget` for descendants |
+| `WatermarkComponent` / `WatermarkProps` | types | `watermark` prop: `{ openPanel }` |
 | `PanelState`, `PanelHandle`, `DockviewHandle`, `ActiveState` | Types | Shared state, open result, bound handle, active panel/group |
 | `WidgetDefinition`, `Widgets`, `WidgetComponent`, `ParamsOf`, `OpenPanelOptions`, `OpenPanelFn` | Types | Registry and open typings |
 
@@ -215,7 +245,7 @@ npm run dev          # demo gallery (landing + /demos/*)
 npm run check        # svelte-check
 npm run biome        # lint + format check
 npm run test:unit    # vitest (registry, utils, factory)
-npm run test:e2e     # playwright (7 tests over the demo gallery)
+npm run test:e2e     # playwright (8 tests over the demo gallery)
 npm run prepack      # svelte-package + publint
 ```
 
@@ -232,6 +262,7 @@ highlighted source (Shiki, display-only):
 | `/demos/layout` | save / restore `bind:layout` |
 | `/demos/themes` | theme switching (`abyss`/`dark`/`light`/`dracula`) |
 | `/demos/events` | `bind:active` + event log |
+| `/demos/empty` | empty state (`watermark` prop) |
 
 ## License
 

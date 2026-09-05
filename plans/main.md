@@ -44,6 +44,7 @@ Terminology:
   bind:layout
   bind:active
   {widgets}
+  watermark={EmptyWatermark}
   options={{ ...dockviewOptions }}
   onReady={(e) => ...}
   onDidLayoutChange={...}
@@ -58,6 +59,7 @@ Terminology:
 | `handle` | `DockviewHandle` | `bind:handle` → `{ api, openPanel, registerWidget }` |
 | `active` | `ActiveState` | `bind:active` → reactive `{ panel, group }` of the active panel/group |
 | `options` | `DockviewComponentOptions` passthrough | theme, keyboard, history, edge groups, etc. |
+| `watermark` | `WatermarkComponent` (`{ openPanel }`) | Svelte empty-state overlay, no `IWatermarkRenderer` factory |
 | events | `onReady`, `onDid*` passthrough | bridged without re-render loops |
 
 Imperative control goes through the bound handle:
@@ -141,7 +143,7 @@ State preservation: dockview moves DOM nodes on drag; mounts survive because
     {#snippet chat(state)}<ChatWidget {...state} />{/snippet}
   </DvWidgets>
   ```
-  Forwarder registers a thin wrapper component per slot and forwards slot params (`params/api/size/title/custom`) as snippet scope. v1 only needs the context hook to exist and be tested; the component itself is deferred.
+  Forwarder registers a thin wrapper component per slot and forwards slot params (`params/api/size/title/custom`) as snippet scope. The context hook is tested (`core/context.test.ts`); the component itself is deferred.
 
 ## 7. SSR / client-only
 
@@ -173,13 +175,12 @@ src/routes/+page.svelte        # demo index (links only; nav lives in the layout
 
 ## 10. Testing
 
-- Unit (`vitest`, jsdom): `registry`, `utils`, `factory` — 19 tests, done.
-- E2E (`@playwright/test`, `src/routes` demo gallery): 7 tests over landing + `/demos/*`, done.
+- Unit (`vitest`, jsdom): `registry`, `utils`, `factory`, `context` — 22 tests, done.
+- E2E (`@playwright/test`, `src/routes` demo gallery): 8 tests over landing + `/demos/*`, done.
 - The browser-component tier (`vitest-browser-svelte`) is folded into Playwright; the "drag does not reset state" assertion is excluded as flaky.
 
 Scripts: `test:unit` and `test:e2e` are wired in `package.json` + `vitest.config.ts` / `playwright.config.ts`.
 
 ## 11. Remaining
 
-- [ ] `registerWidget` context hook test (prep for `<DvWidgets>`, deferred)
 - [ ] Gridview / Splitview / Paneview ports (v2)

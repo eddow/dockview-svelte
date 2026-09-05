@@ -60,6 +60,24 @@ export type WidgetComponent<P = Record<string, unknown>> = Component<{
 }>
 
 /**
+ * Props passed to the Svelte `watermark` overlay component.
+ * Rendered as a plain Svelte child when the dock is empty, so it reads the
+ * parent `DockviewContext` (`api`, `registerWidget`) via `getContext` —
+ * no dockview `IWatermarkRenderer` factory involved.
+ */
+export interface WatermarkProps<W extends Widgets = Widgets> {
+	/** Open a panel by widget key — same as `handle.openPanel`. */
+	openPanel: OpenPanelFn<W>
+}
+
+/**
+ * A Svelte component rendered as the empty-state overlay.
+ * `any` props: Svelte component variance can't express "accepts my W" —
+ * the overlay always passes this dock's typed `openPanel` at runtime.
+ */
+export type WatermarkComponent = Component<any>
+
+/**
  * Extracts the params type of a widget component from its `state` prop.
  * Components that do not declare a `state: PanelState<...>` prop fall back to
  * an open record.
