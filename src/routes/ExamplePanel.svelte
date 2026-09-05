@@ -1,12 +1,12 @@
 <script lang="ts">
-	import type { PanelState } from '$lib/core/types.js'
+import type { PanelState } from '$lib/core/types.js'
 
-	interface ExampleParams {
-		message?: string
-		count?: number
-	}
+interface ExampleParams {
+	message?: string
+	count?: number
+}
 
-	let { state }: { state: PanelState<ExampleParams> } = $props()
+let { state }: { state: PanelState<ExampleParams> } = $props()
 </script>
 
 <div class="panel">

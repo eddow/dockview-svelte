@@ -1,35 +1,77 @@
 import { expect, test } from '@playwright/test'
 
-test('demo renders three panels with shared tab/content state', async ({ page }) => {
+test('landing page links all demos', async ({ page }) => {
 	await page.goto('/')
 
-	// Three tabs: First, Second, plain (default title = widget key).
-	await expect(page.getByRole('tab', { name: /First/ })).toBeVisible()
-	await expect(page.getByRole('tab', { name: /Second/ })).toBeVisible()
-	await expect(page.getByRole('tab', { name: /plain/ })).toBeVisible()
-
-	// Active panel content shows its params.
-	await expect(page.getByRole('tabpanel').getByText('no custom tab')).toBeVisible()
+	for (const name of [
+		'open a widget',
+		'Reactive params',
+		'Custom tab',
+		'bind:layout',
+		'Themes',
+		'bind:active',
+	]) {
+		await expect(page.getByRole('link', { name })).toBeVisible()
+	}
 })
 
-test('custom channel round-trips from content to tab badge', async ({ page }) => {
-	await page.goto('/')
+test('basic demo opens a widget with highlighted source', async ({ page }) => {
+	await page.goto('/demos/basic')
 
-	// The `example` widget has a custom tab with an unread badge; `plain` uses
-	// DefaultTab (no badge). Activate "First", bump unread, check its tab badge.
-	await page.getByRole('tab', { name: /First/ }).click()
-	await page.getByRole('tabpanel').getByRole('button', { name: 'unread++' }).click()
-	await expect(page.getByRole('tab', { name: /First/ }).getByText('1')).toBeVisible()
+	await expect(page.getByRole('tab', { name: /Basic/ })).toBeVisible()
+	await expect(page.getByRole('tabpanel').getByText('Hello from a widget')).toBeVisible()
+	// Display-only Shiki block shows the demo source.
+	await expect(page.getByText('openPanel', { exact: false }).first()).toBeVisible()
 })
 
-test('layout round-trips through bind:layout', async ({ page }) => {
-	await page.goto('/')
+test('params demo round-trips reactive params', async ({ page }) => {
+	await page.goto('/demos/params')
 
-	// Close one panel; layout serialization must still include the others.
+	await expect(page.getByRole('tab', { name: /Counter/ })).toBeVisible()
+	await page.getByRole('tabpanel').getByRole('button', { name: '+ step (local)' }).click()
+	await expect(page.getByRole('tabpanel').getByText('12', { exact: false })).toBeVisible()
+})
+
+test('custom-tab demo shares state between tab and content', async ({ page }) => {
+	await page.goto('/demos/custom-tab')
+
+	await page.getByRole('tab', { name: /Inbox \(custom tab\)/ }).click()
 	await page
-		.getByRole('tab', { name: /Second/ })
-		.getByRole('button', { name: /close/i })
+		.getByRole('tabpanel')
+		.getByRole('button', { name: /unread\+\+/ })
 		.click()
-	await expect(page.getByRole('tab', { name: /Second/ })).toHaveCount(0)
-	await expect(page.getByRole('tab', { name: /First/ })).toBeVisible()
+	await expect(page.getByRole('tab', { name: /Inbox \(custom tab\)/ }).getByText('1')).toBeVisible()
+})
+
+test('layout demo saves and restores bind:layout', async ({ page }) => {
+	await page.goto('/demos/layout')
+
+	await expect(page.getByRole('tab', { name: 'Panel A' })).toBeVisible()
+	await expect(page.getByRole('tab', { name: 'Panel B' })).toBeVisible()
+
+	// Save, close a panel, restore → both tabs back.
+	await page.getByRole('button', { name: 'save layout' }).click()
+	await page.getByRole('button', { name: 'restore layout' }).click()
+	await page.getByRole('tab', { name: 'Panel A' }).getByRole('button', { name: /close/i }).click()
+	await expect(page.getByRole('tab', { name: 'Panel A' })).toHaveCount(0)
+	await page.getByRole('button', { name: 'restore layout' }).click()
+	await expect(page.getByRole('tab', { name: 'Panel A' })).toBeVisible()
+	await expect(page.getByRole('tab', { name: 'Panel B' })).toBeVisible()
+})
+
+test('themes demo switches themes', async ({ page }) => {
+	await page.goto('/demos/themes')
+
+	await expect(page.getByRole('tab', { name: /Themed/ })).toBeVisible()
+	await page.getByRole('button', { name: 'light' }).click()
+	await expect(page.getByRole('button', { name: 'light' })).toHaveAttribute('aria-pressed', 'true')
+	await expect(page.getByRole('tab', { name: /Themed/ })).toBeVisible()
+})
+
+test('events demo tracks bind:active and event log', async ({ page }) => {
+	await page.goto('/demos/events')
+
+	await expect(page.getByText('active panel: b-1')).toBeVisible()
+	await expect(page.getByText('added a-1')).toBeVisible()
+	await expect(page.getByText('added b-1')).toBeVisible()
 })

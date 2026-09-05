@@ -349,8 +349,17 @@ Implementation notes:
 ## 8. CSS
 
 The library does **not** import the dockview stylesheet. It depends on `dockview`
-(which re-exports `dockview-core` **and** ships the stylesheet), so the
-stylesheet is imported directly from the dependency:
+(which re-exports `dockview-core` **and** ships the stylesheet). The demo app
+imports it once in `src/routes/+layout.svelte`, alongside the demo nav:
+
+```svelte
+<script lang="ts">
+	import 'dockview/dist/styles/dockview.css';
+	import '../app.css';
+</script>
+```
+
+Library consumers do the same in their own root layout (or entry file):
 
 ```ts
 import 'dockview/dist/styles/dockview.css';
@@ -407,3 +416,19 @@ The widget key (`'chat'`, `'help'`) is the same string dockview uses as the
 component name, so it doubles as a sensible default label — matching dockview's
 own convention of defaulting a tab's title to its component id. Widgets that
 want a friendlier label declare `title` on their `WidgetDefinition`.
+
+## 11. Layout loop-break (bind:layout)
+
+`bind:layout` serializes on `onDidLayoutChange` and applies external changes via
+`fromJSON`, guarded by a `lastEmitted` deep-equal check to prevent the
+`fromJSON → onDidLayoutChange → emit` feedback loop.
+
+`onDidLayoutFromJSON` is **deliberately not** part of the loop-break. dockview
+runs `fromJSON()` inside `mutation("load")`, which fires `onWillMutateLayout` /
+`onDidMutateLayout` then `onDidLayoutFromJSON`, and the whole batch aggregates
+into the buffered `onDidLayoutChange` — the single emitter that serializes into
+`bind:layout` (stamping `lastEmitted`). So a `fromJSON` triggered by the
+`$effect` always converges (the emitted JSON deep-equals `lastEmitted` on the
+next pass), and `onDidLayoutFromJSON` stays a pure "restore finished"
+notification rather than a second emit path — wiring it into `lastEmitted`
+would double-emit, not harden.

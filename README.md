@@ -211,13 +211,27 @@ The component renders an empty `<div>` on the server and instantiates `DockviewC
 ## Developing
 
 ```sh
-npm run dev          # demo app (src/routes)
+npm run dev          # demo gallery (landing + /demos/*)
 npm run check        # svelte-check
 npm run biome        # lint + format check
 npm run test:unit    # vitest (registry, utils, factory)
-npm run test:e2e     # playwright (demo: render, custom channel, layout)
+npm run test:e2e     # playwright (7 tests over the demo gallery)
 npm run prepack      # svelte-package + publint
 ```
+
+## Demos
+
+Landing page + one route per concept, each with live `Dockview` and its
+highlighted source (Shiki, display-only):
+
+| Route | Concept |
+| ----- | ------- |
+| `/demos/basic` | `openPanel` a widget |
+| `/demos/params` | two-way reactive `params` |
+| `/demos/custom-tab` | custom tab + shared `PanelState.custom` badge |
+| `/demos/layout` | save / restore `bind:layout` |
+| `/demos/themes` | theme switching (`abyss`/`dark`/`light`/`dracula`) |
+| `/demos/events` | `bind:active` + event log |
 
 ## License
 

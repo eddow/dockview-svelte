@@ -15,14 +15,22 @@ const { createDockviewFactory } = await import('./factory.svelte.js')
 
 function fakePanelApi(id: string) {
 	const listeners: Record<string, Array<(e: never) => void>> = {}
+	const on = (key: string) => (cb: (e: never) => void) => {
+		listeners[key] ??= []
+		listeners[key].push(cb)
+		return { dispose: vi.fn() }
+	}
 	return {
 		id,
-		onDidTitleChange: vi.fn((cb: (e: never) => void) => {
-			listeners.title ??= []
-			listeners.title.push(cb)
-			return { dispose: vi.fn() }
-		}),
+		onDidTitleChange: vi.fn(on('title')),
+		onDidActiveChange: vi.fn(on('active')),
+		onDidFocusChange: vi.fn(on('focus')),
+		onDidVisibilityChange: vi.fn(on('visibility')),
+		onDidChangePinned: vi.fn(on('pinned')),
+		onDidActiveGroupChange: vi.fn(on('groupActive')),
 		updateParameters: vi.fn(),
+		setActive: vi.fn(),
+		setPinned: vi.fn(),
 		emitTitle: (title: string) => listeners.title?.forEach((cb) => cb({ title } as never)),
 	}
 }

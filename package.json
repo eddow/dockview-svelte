@@ -47,6 +47,7 @@
 		"jsdom": "^30.0.1",
 		"playwright": "^1.62.1",
 		"publint": "^0.3.21",
+		"shiki": "^4.4.3",
 		"svelte": "^5.56.1",
 		"svelte-check": "^4.6.0",
 		"typescript": "^6.0.3",

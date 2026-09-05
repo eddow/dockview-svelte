@@ -46,7 +46,20 @@
 	interface Props<W extends Widgets> {
 		/** Widget registry: `{ [key]: { component, tab?, title? } }`. */
 		widgets?: W
-		/** `DockviewComponentOptions` passthrough (theme, keyboard, history, …). */
+		/**
+		 * `DockviewComponentOptions` passthrough (theme, keyboard, history, …).
+		 *
+		 * `createComponent` / `createTabComponent` are owned by the library (Svelte
+		 * `mount` factories backed by the `widgets` registry) and cannot be
+		 * overridden. The remaining raw-dockview factories pass through untouched
+		 * and are NOT Svelte-wrapped — use them only if you want to render those
+		 * slots imperatively yourself:
+		 * `createWatermarkComponent`, `createLeftHeaderActionComponent`,
+		 * `createRightHeaderActionComponent`, `createPrefixHeaderActionComponent`,
+		 * `createTabGroupChipComponent`, `createGroupDragGhostComponent`,
+		 * `createContextMenuItemComponent`. (`defaultTabComponent` is a plain
+		 * string key and works with the registry as-is.)
+		 */
 		options?: Omit<DockviewComponentOptions, 'createComponent' | 'createTabComponent'>
 		/** `bind:layout` — dockview JSON (`toJSON`/`fromJSON` shape). */
 		layout?: SerializedDockview
@@ -213,6 +226,18 @@
 		current.fromJSON(layout)
 	})
 
+	// Live `options` changes (theme, etc.) → apply via `updateOptions`.
+	// The constructor reads `options` once; without this, later prop changes
+	// (e.g. `options={{ theme: themes[name] }}`) are silently ignored.
+	// NOTE: `opts` must be read before the `component` guard — otherwise the
+	// initial run returns early without tracking `options`, and later theme
+	// changes never re-trigger the effect.
+	$effect(() => {
+		const opts = options
+		if (!component) return
+		component.updateOptions(opts)
+	})
+
 	onMount(() => {
 		factory = createDockviewFactory(registry)
 		const created = new DockviewComponent(container, {
@@ -220,6 +245,13 @@
 			createComponent: factory.createComponent,
 			createTabComponent: factory.createTabComponent
 		})
+		// Apply a pre-existing `bind:layout` (e.g. a hard-coded initial layout)
+		// before exposing the api — the `$effect` above only reacts to changes.
+		if (layout) {
+			created.api.fromJSON(layout)
+			lastEmitted = created.api.toJSON()
+			layout = lastEmitted
+		}
 		component = created
 		api = created.api
 		context.api = created.api
