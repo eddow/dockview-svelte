@@ -1,26 +1,42 @@
 <script lang="ts">
-import { type IGridviewPanel, Orientation } from 'dockview'
-import { onMount } from 'svelte'
-import { defineGridviewWidgets, Gridview, type GridviewHandle } from '$lib/index.js'
-import GridCell from '../_widgets/GridCell.svelte'
+	import { type IGridviewPanel, Orientation } from 'dockview'
+	import { defineGridviewWidgets, Gridview, type GridviewHandle } from '$lib/index.js'
+	import GridCell from '../_widgets/GridCell.svelte'
 
-const widgets = defineGridviewWidgets({
-	a: { component: GridCell },
-	b: { component: GridCell },
-})
-
-let handle = $state<GridviewHandle<typeof widgets> | undefined>(undefined)
-let orientation = $state<Orientation>(Orientation.HORIZONTAL)
-let panels = $state<IGridviewPanel[]>([])
-let activePanel = $state<IGridviewPanel | undefined>(undefined)
-
-onMount(() => {
-	handle?.openPanel('a', { params: { text: 'Left cell' } })
-	handle?.openPanel('b', {
-		params: { text: 'Right cell' },
-		position: { direction: 'right', referencePanel: 'a-1' },
+	const widgets = defineGridviewWidgets({
+		a: { component: GridCell },
+		b: { component: GridCell }
 	})
-})
+
+	let handle = $state<GridviewHandle<typeof widgets> | undefined>(undefined)
+	let orientation = $state<Orientation>(Orientation.HORIZONTAL)
+	let panels = $state<IGridviewPanel[]>([])
+	let activePanel = $state<IGridviewPanel | undefined>(undefined)
+
+	// Seed once the gridview has a real size (see splitview demo): cells opened
+	// at 0px collapse — `Sizing.Distribute` divides the then-current size.
+	function seed() {
+		const wait = () => {
+			if ((handle?.api.width ?? 0) > 0) {
+				handle?.openPanel('a', { params: { text: 'Top-left cell' } })
+				handle?.openPanel('b', {
+					params: { text: 'Top-right cell' },
+					position: { direction: 'right', referencePanel: 'a-1' }
+				})
+				handle?.openPanel('a', {
+					params: { text: 'Bottom-left cell' },
+					position: { direction: 'below', referencePanel: 'a-1' }
+				})
+				handle?.openPanel('b', {
+					params: { text: 'Bottom-right cell' },
+					position: { direction: 'below', referencePanel: 'b-1' }
+				})
+			} else {
+				requestAnimationFrame(wait)
+			}
+		}
+		requestAnimationFrame(wait)
+	}
 </script>
 
 <svelte:head><title>Gridview — dockview-svelte demos</title></svelte:head>
@@ -55,19 +71,24 @@ onMount(() => {
 	<span>cells: <strong>{panels.length}</strong></span>
 	<span>active: <strong>{activePanel?.id ?? 'none'}</strong></span>
 </div>
-<div class="demo">
+<div class="demo demo--tall">
 	<Gridview
 		bind:handle
 		bind:panels
 		bind:activePanel
 		{widgets}
 		options={{ orientation, proportionalLayout: true }}
+		onReady={seed}
 	/>
 </div>
 
 <style>
 	.demo {
 		height: 40vh;
+	}
+	/* Two rows need more vertical room than the single-row demos. */
+	.demo--tall {
+		height: 60vh;
 	}
 	.row {
 		display: flex;

@@ -1,25 +1,25 @@
 <script lang="ts">
-import { highlight } from './highlight.js'
+	import { highlight } from './highlight.js'
 
-interface Props {
-	code: string
-	lang?: 'svelte' | 'typescript'
-	title?: string
-}
-
-let { code, lang = 'svelte', title = 'Code' }: Props = $props()
-
-let html = $state('<pre><code>loading…</code></pre>')
-
-$effect(() => {
-	let cancelled = false
-	highlight(code, lang).then((h) => {
-		if (!cancelled) html = h
-	})
-	return () => {
-		cancelled = true
+	interface Props {
+		code: string
+		lang?: 'svelte' | 'typescript'
+		title?: string
 	}
-})
+
+	let { code, lang = 'svelte', title = 'Code' }: Props = $props()
+
+	let html = $state('<pre><code>loading…</code></pre>')
+
+	$effect(() => {
+		let cancelled = false
+		highlight(code, lang).then((h) => {
+			if (!cancelled) html = h
+		})
+		return () => {
+			cancelled = true
+		}
+	})
 </script>
 
 <details class="code" open>
@@ -47,5 +47,6 @@ $effect(() => {
 	.code__body :global(pre) {
 		margin: 0;
 		padding: 0.75rem;
+		tab-size: 2;
 	}
 </style>

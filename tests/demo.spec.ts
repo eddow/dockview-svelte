@@ -54,6 +54,12 @@ test('params demo pushes widget params to dockview (two-way)', async ({ page }) 
 	// the panel text re-renders from the merged params.
 	await page.getByRole('tabpanel').getByRole('button', { name: 'step++ (param)' }).click()
 	await expect(page.getByRole('tabpanel').getByText('step=3', { exact: false })).toBeVisible()
+	// The page holds the SAME state object via the PanelHandle — it sees the
+	// widget's write without any extra wiring.
+	await expect(page.getByText('page sees: start=10, step=3', { exact: false })).toBeVisible()
+	// And the reverse: a page-side write propagates into the widget.
+	await page.getByRole('button', { name: /page: step\+\+/ }).click()
+	await expect(page.getByRole('tabpanel').getByText('step=4', { exact: false })).toBeVisible()
 	// `rename to count` exercises the per-panel api escape hatch.
 	await page.getByRole('tabpanel').getByRole('button', { name: 'rename to count' }).click()
 	await expect(page.getByRole('tab', { name: /Count/ })).toBeVisible()
@@ -182,9 +188,24 @@ test('splitview demo opens panes and toggles orientation', async ({ page }) => {
 	await page.goto('/demos/splitview')
 
 	const demo = page.locator('.demo')
-	// Both panes render; the second is active and visible.
+	// Both panes render side by side with non-zero width (no collapsed first pane).
+	await expect(demo.getByText('Left pane', { exact: true })).toBeVisible()
 	await expect(demo.getByText('Right pane', { exact: true })).toBeVisible()
 	await expect(page.getByText('views: 2')).toBeVisible()
+	const widths = await demo.locator(':scope .dv-view-container > .dv-view').evaluateAll((els) =>
+		els.map((el) => el.getBoundingClientRect().width)
+	)
+	expect(widths.length).toBe(2)
+	for (const w of widths) expect(w).toBeGreaterThan(100)
+	// The last opened pane is active via `bind:activeView`.
+	await expect(page.getByText('active: b-1')).toBeVisible()
+	// Activating the other pane follows through the per-panel active event
+	// (the library derives `bind:activeView` from it).
+	await demo.locator('.split', { hasText: 'Left pane' }).getByRole('button', { name: 'activate' }).click()
+	await expect(
+		demo.locator('.split', { hasText: 'Left pane' }).getByText('active: true', { exact: false })
+	).toBeVisible()
+	await expect(page.getByText('active: a-1')).toBeVisible()
 	// Add a pane → count updates.
 	await page.getByRole('button', { name: 'add pane' }).click()
 	await expect(page.getByText('views: 3')).toBeVisible()
@@ -198,16 +219,28 @@ test('gridview demo opens cells and toggles orientation', async ({ page }) => {
 	await page.goto('/demos/gridview')
 
 	const demo = page.locator('.demo')
-	// Both cells render (the second takes the width, like the splitview demo).
-	await expect(demo.getByText('Right cell', { exact: true })).toBeVisible()
-	await expect(page.getByText('cells: 2')).toBeVisible()
+	// 2x2 grid: all four cells render with non-zero size.
+	for (const name of ['Top-left cell', 'Top-right cell', 'Bottom-left cell', 'Bottom-right cell']) {
+		await expect(demo.getByText(name, { exact: true })).toBeVisible()
+	}
+	await expect(page.getByText('cells: 4')).toBeVisible()
+	// The last opened cell is active via `bind:activePanel` (synced on the
+	// open path — dockview fires no active event for programmatic adds).
+	await expect(page.getByText('active: b-2')).toBeVisible()
+	// Activating another cell follows through the per-panel active event
+	// (the library derives `bind:activePanel` from it).
+	await demo.locator('.grid', { hasText: 'Top-left cell' }).getByRole('button', { name: 'activate' }).click()
+	await expect(
+		demo.locator('.grid', { hasText: 'Top-left cell' }).getByText('active: true', { exact: false })
+	).toBeVisible()
+	await expect(page.getByText('active: a-1')).toBeVisible()
 	// Add a cell → count updates.
 	await page.getByRole('button', { name: 'add cell' }).click()
-	await expect(page.getByText('cells: 3')).toBeVisible()
+	await expect(page.getByText('cells: 5')).toBeVisible()
 	// Orientation toggle flips the button label.
 	await page.getByRole('button', { name: /orientation:/ }).click()
 	await expect(page.getByRole('button', { name: 'orientation: vertical' })).toBeVisible()
-	await expect(demo.getByText('Right cell', { exact: true })).toBeVisible()
+	await expect(demo.getByText('Top-right cell', { exact: true })).toBeVisible()
 })
 
 test('paneview demo opens panes and collapses', async ({ page }) => {
@@ -227,5 +260,8 @@ test('declarative demo opens a DvWidget panel', async ({ page }) => {
 	await page.goto('/demos/declarative')
 
 	await expect(page.getByRole('tab', { name: /Basic/ })).toBeVisible()
-	await expect(page.getByRole('tabpanel').getByText('Hello from a widget')).toBeVisible()
+	await expect(page.getByRole('tabpanel').getByText('panel #1')).toBeVisible()
+	// Each added panel gets an auto-incremented number param.
+	await page.getByRole('button', { name: 'add panel' }).click()
+	await expect(page.getByRole('tabpanel').getByText('panel #2')).toBeVisible()
 })

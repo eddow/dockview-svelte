@@ -1,29 +1,29 @@
 <script lang="ts">
-	import Dockview from './Dockview.svelte'
+import Dockview from './Dockview.svelte'
 
-	let {
-		widgets = {},
-		options = {},
-		layout = $bindable(undefined),
-		watermark,
-		onReady
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	}: any = $props()
-
+let {
+	widgets = {},
+	options = {},
+	layout = $bindable(undefined),
+	watermark,
+	onReady,
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	let active: any = $state({
-		panel: undefined,
-		group: undefined
-	})
-	let floating: { count: number; hasFloating: boolean } = $state({ count: 0, hasFloating: false })
-	let popout: { count: number; hasPopout: boolean } = $state({ count: 0, hasPopout: false })
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	let handle: any = $state(undefined)
-	let layoutSnapshot: string = $state('none')
+}: any = $props()
 
-	$effect(() => {
-		layoutSnapshot = layout === undefined ? 'none' : JSON.stringify(layout)
-	})
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let active: any = $state({
+	panel: undefined,
+	group: undefined,
+})
+let floating: { count: number; hasFloating: boolean } = $state({ count: 0, hasFloating: false })
+let popout: { count: number; hasPopout: boolean } = $state({ count: 0, hasPopout: false })
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let handle: any = $state(undefined)
+let layoutSnapshot: string = $state('none')
+
+$effect(() => {
+	layoutSnapshot = layout === undefined ? 'none' : JSON.stringify(layout)
+})
 </script>
 
 <Dockview

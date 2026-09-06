@@ -140,9 +140,27 @@ two-way there (writing `state.visible` calls `api.setVisible`), mirroring the
 same capture pattern as `active`/`pinned`: the dockview → widget event updates
 both the field and its `last*` guard, so the widget → dockview `$effect` only
 fires on genuine widget writes. `SplitviewApi`/`GridviewApi`/`PaneviewApi`
-expose no `setVisible`/`setActive`, so the handle delegates to the panel view
-(`getPanel(id).setVisible(...)` / `setActive(true)`), throwing
+expose no `setVisible`/`setActive`, so the handle delegates to the panel api
+(`getPanel(id).api.setVisible(...)` / `api.setActive()` — `panel.setVisible`
+only fires `onDidVisibilityChange` without touching the layout), throwing
 `unknown panel "<id>"` for bad ids — the same convention as `removePanel`.
+
+`Gridview` also exposes `bind:activePanel` and `Splitview` exposes
+`bind:activeView` (plus `onDidActiveViewChange`). Neither `GridviewApi` nor
+`SplitviewApi` fires a component-level active event on programmatic
+activation — `GridviewComponent.addPanel` → `doSetGroupActive` and
+`SplitviewComponent.addPanel`/`removePanel` → `setActive` only fire the
+per-panel `api.onDidActiveChange` (mirrored to `state.active` by the factory).
+So both bindings sync explicitly on the open/add/remove paths (new pane/cell
+is active; removal falls back to the last remaining one, mirroring dockview's
+own fallback) and derive the rest from the factory's per-panel
+`onDidActiveChange` hook (deduped on panel id; deactivation `false` is
+ignored so the incoming cell's `true` wins). The component-level
+`onDidActivePanelChange` (which dockview fires only on focus-driven
+activation via `registerPanel`'s `onDidFocusChange` wiring) feeds the same
+setter as a secondary source. Consequence for demos: the page-level `active:`
+readout follows programmatic opens *and* `state.active = true` button writes
+immediately — no focus move needed.
 
 ## 4. Title & header resolution
 

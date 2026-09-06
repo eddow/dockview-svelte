@@ -28,6 +28,12 @@ export interface GridviewFactory {
 	createComponent: (options: CreateComponentOptions) => GridviewPanelType
 	/** Access a cell's state by id (used by `openPanel` to build the handle). */
 	getState: (id: string) => GridviewState | undefined
+	/**
+	 * Fired when a cell's `api.onDidActiveChange` reports `isActive: true`.
+	 * The component derives `bind:activePanel` from this — `GridviewApi`'s
+	 * own `onDidActivePanelChange` only fires on focus-driven activation.
+	 */
+	onDidActivePanelChange: (panel: GridviewPanelType) => void
 }
 
 /** Create a `$state`-wrapped gridview state. `$state` must be a declaration initializer. */
@@ -51,6 +57,8 @@ interface GridviewPanelDeps {
 	getOrCreateState: (api: GridviewPanelApi, params: Parameters) => GridviewPanelEntry
 	/** Remove this panel's entry from the shared registry map (on dispose). */
 	releaseState: (id: string) => void
+	/** Notify the component when this cell becomes active. */
+	notifyActive: (panel: GridviewPanelType) => void
 }
 
 /**
@@ -106,6 +114,12 @@ class SvelteGridviewPanel extends GridviewPanelBase {
 			this.api.onDidActiveChange((event) => {
 				this.state!.active = event.isActive
 				this.lastActive = event.isActive
+				// Activation (button, `setActive`, focus, programmatic add)
+				// lands here on the newly-active cell — the component derives
+				// `bind:activePanel` from it. Deactivation (`false`) is
+				// ignored; the incoming cell's `true` wins without ordering
+				// hazards.
+				if (event.isActive) this.deps.notifyActive(this)
 			}),
 			this.api.onDidFocusChange((event) => {
 				this.state!.focused = event.isFocused
@@ -193,7 +207,8 @@ class SvelteGridviewPanel extends GridviewPanelBase {
  */
 export function createGridviewFactory(
 	registry: GridviewWidgetRegistry,
-	context?: GridviewContext
+	context?: GridviewContext,
+	hooks?: { onDidActivePanelChange?: (panel: GridviewPanelType) => void }
 ): GridviewFactory {
 	const panels = new Map<string, GridviewPanelEntry>()
 
@@ -216,11 +231,13 @@ export function createGridviewFactory(
 			context,
 			getOrCreateState,
 			releaseState: (id: string) => panels.delete(id),
+			notifyActive: (panel) => hooks?.onDidActivePanelChange?.(panel),
 		})
 	}
 
 	return {
 		createComponent,
 		getState: (id: string) => panels.get(id)?.state,
+		onDidActivePanelChange: (panel) => hooks?.onDidActivePanelChange?.(panel),
 	}
 }

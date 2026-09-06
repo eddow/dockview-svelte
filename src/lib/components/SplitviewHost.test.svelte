@@ -12,6 +12,8 @@
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let views: any[] = $state([])
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let activeView: any = $state(undefined)
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let handle: any = $state(undefined)
 	let layoutSnapshot: string = $state('none')
 
@@ -20,8 +22,9 @@
 	})
 </script>
 
-<Splitview {widgets} {options} bind:layout bind:views bind:handle {onReady} />
+<Splitview {widgets} {options} bind:layout bind:views bind:activeView bind:handle {onReady} />
 <span data-testid="views-count">{views.length}</span>
 <span data-testid="views-ids">{views.map((v) => v.id).join(',')}</span>
+<span data-testid="active-id">{activeView?.id ?? 'none'}</span>
 <span data-testid="has-handle">{handle ? 'yes' : 'no'}</span>
 <span data-testid="layout-snapshot">{layoutSnapshot}</span>

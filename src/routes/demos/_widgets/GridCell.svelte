@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { GridviewState } from '$lib/index.js'
+import type { GridviewState } from '$lib/index.js'
 
-	let { state }: { state: GridviewState<{ text?: string }> } = $props()
+let { state }: { state: GridviewState<{ text?: string }> } = $props()
 </script>
 
 <div class="grid">

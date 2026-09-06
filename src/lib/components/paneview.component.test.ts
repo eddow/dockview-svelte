@@ -21,7 +21,7 @@ const { makeFakePaneviewApi } = vi.hoisted(() => {
 		}
 		const panels: Array<{
 			id: string
-			setVisible: ReturnType<typeof vi.fn>
+			api: { setVisible: ReturnType<typeof vi.fn> }
 			setExpanded: ReturnType<typeof vi.fn>
 		}> = []
 		const api = {
@@ -30,7 +30,7 @@ const { makeFakePaneviewApi } = vi.hoisted(() => {
 			},
 			addPanel: vi.fn(
 				(opts: { id: string; component: string; title?: string; params?: unknown }) => {
-					const panel = { id: opts.id, setVisible: vi.fn(), setExpanded: vi.fn() }
+					const panel = { id: opts.id, api: { setVisible: vi.fn() }, setExpanded: vi.fn() }
 					panels.push(panel)
 					return panel
 				}
@@ -191,7 +191,10 @@ describe('Paneview component logic', () => {
 		expect(text(view, 'panels-count')).toBe('1')
 
 		;(captured!.handle as unknown as H).setVisible(h.id, false)
-		expect(captured!.api.getPanel(h.id)?.setVisible).toHaveBeenCalledWith(false)
+		expect(
+			(captured!.api.getPanel(h.id) as unknown as { api: { setVisible: unknown } }).api
+				.setVisible
+		).toHaveBeenCalledWith(false)
 		;(captured!.handle as unknown as H).setExpanded(h.id, false)
 		expect(captured!.api.getPanel(h.id)?.setExpanded).toHaveBeenCalledWith(false)
 		;(captured!.handle as unknown as H).movePanel(0, 1)

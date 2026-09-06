@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { SplitviewState } from '$lib/index.js'
+import type { SplitviewState } from '$lib/index.js'
 
-	let { state }: { state: SplitviewState<{ text?: string }> } = $props()
+let { state }: { state: SplitviewState<{ text?: string }> } = $props()
 </script>
 
 <div class="split">

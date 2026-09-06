@@ -190,12 +190,12 @@
 		api.movePanel(from, to)
 	}
 
-	/** Show or hide a pane by id (via the panel api — `PaneviewApi` has no `setVisible`). */
+	/** Show or hide a pane by id (via the panel api — `panel.setVisible` only fires `onDidVisibilityChange` without touching the layout). */
 	function setVisible(id: string, visible: boolean): void {
 		if (!api) {
 			throw new Error('dockview-svelte: Paneview is not mounted yet')
 		}
-		getPanelOrThrow(id).setVisible(visible)
+		getPanelOrThrow(id).api.setVisible(visible)
 	}
 
 	/** Expand or collapse a pane by id. */

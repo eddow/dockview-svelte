@@ -28,6 +28,12 @@ export interface SplitviewFactory {
 	createComponent: (options: CreateComponentOptions) => SplitviewPanel
 	/** Access a view's state by id (used by `openPanel` to build the handle). */
 	getState: (id: string) => SplitviewState | undefined
+	/**
+	 * Fired when a pane's `api.onDidActiveChange` reports `isActive: true`.
+	 * The component derives `bind:activeView` from this — `SplitviewApi`
+	 * exposes no active event of its own.
+	 */
+	onDidActiveViewChange: (view: SplitviewPanel) => void
 }
 
 /** Create a `$state`-wrapped splitview state. `$state` must be a declaration initializer. */
@@ -51,6 +57,8 @@ interface SplitviewPanelDeps {
 	getOrCreateState: (api: SplitviewPanelApi, params: Parameters) => SplitviewPanelEntry
 	/** Remove this panel's entry from the shared registry map (on dispose). */
 	releaseState: (id: string) => void
+	/** Notify the component when this pane becomes active. */
+	notifyActive: (view: SplitviewPanel) => void
 }
 
 /**
@@ -108,6 +116,11 @@ class SvelteSplitviewPanel extends SplitviewPanelBase {
 			this.api.onDidActiveChange((event) => {
 				this.state!.active = event.isActive
 				this.lastActive = event.isActive
+				// Activation (button, `setActive`, focus) lands here on the
+				// newly-active pane — the component derives `bind:activeView`
+				// from it. Deactivation (`false`) is ignored; the incoming
+				// pane's `true` wins without ordering hazards.
+				if (event.isActive) this.deps.notifyActive(this)
 			}),
 			this.api.onDidFocusChange((event) => {
 				this.state!.focused = event.isFocused
@@ -196,7 +209,8 @@ class SvelteSplitviewPanel extends SplitviewPanelBase {
  */
 export function createSplitviewFactory(
 	registry: SplitviewWidgetRegistry,
-	context?: SplitviewContext
+	context?: SplitviewContext,
+	hooks?: { onDidActiveViewChange?: (view: SplitviewPanel) => void }
 ): SplitviewFactory {
 	const panels = new Map<string, SplitviewPanelEntry>()
 
@@ -219,11 +233,13 @@ export function createSplitviewFactory(
 			context,
 			getOrCreateState,
 			releaseState: (id: string) => panels.delete(id),
+			notifyActive: (view) => hooks?.onDidActiveViewChange?.(view),
 		})
 	}
 
 	return {
 		createComponent,
 		getState: (id: string) => panels.get(id)?.state,
+		onDidActiveViewChange: (view) => hooks?.onDidActiveViewChange?.(view),
 	}
 }

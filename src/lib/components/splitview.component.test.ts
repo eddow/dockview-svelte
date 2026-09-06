@@ -25,7 +25,10 @@ const { makeFakeSplitviewApi } = vi.hoisted(() => {
 				return panels
 			},
 			addPanel: vi.fn((opts: { id: string; component: string; params?: unknown }) => {
-				const panel = { id: opts.id, api: { id: opts.id } }
+				const panel = {
+					id: opts.id,
+					api: { id: opts.id, setVisible: vi.fn(), setActive: vi.fn() },
+				}
 				panels.push(panel)
 				return panel
 			}),
@@ -128,6 +131,8 @@ describe('Splitview component logic', () => {
 		expect(text(view, 'layout-snapshot')).not.toBe('none')
 		expect(text(view, 'views-count')).toBe('2')
 		expect(text(view, 'views-ids')).toBe('a-1,a-2')
+		// The newly opened pane is active (mirrors dockview's `addPanel` behavior).
+		expect(text(view, 'active-id')).toBe('a-2')
 		view.unmount()
 	})
 
@@ -170,6 +175,7 @@ describe('Splitview component logic', () => {
 		).openPanel('a')
 		await flush()
 		expect(text(view, 'views-count')).toBe('1')
+		expect(text(view, 'active-id')).toBe(h.id)
 
 		captured!.handle
 		;(
@@ -182,6 +188,7 @@ describe('Splitview component logic', () => {
 		).removePanel(h.id)
 		await flush()
 		expect(text(view, 'views-count')).toBe('0')
+		expect(text(view, 'active-id')).toBe('none')
 
 		expect(() =>
 			(captured!.handle as unknown as { removePanel: (id: string) => void }).removePanel('nope')
@@ -193,8 +200,8 @@ describe('Splitview component logic', () => {
 		)
 		expect(captured!.api.movePanel).toHaveBeenCalledWith(0, 1)
 
-		// `setVisible`/`setActive` delegate to the panel view (the fake api
-		// has no `setVisible` — the panel object carries `setVisible`).
+		// `setVisible`/`setActive` delegate to the panel api (the fake api
+		// has no `setVisible` — the panel's `api` carries it).
 		const h2 = (
 			captured!.handle as unknown as {
 				openPanel: (k: string) => { id: string }
@@ -204,25 +211,22 @@ describe('Splitview component logic', () => {
 		).openPanel('a')
 		await flush()
 		const panel = captured!.api.getPanel(h2.id) as unknown as {
-			setVisible: ReturnType<typeof vi.fn>
-			setActive: ReturnType<typeof vi.fn>
+			api: { setVisible: ReturnType<typeof vi.fn>; setActive: ReturnType<typeof vi.fn> }
 		}
-		panel.setVisible = vi.fn()
-		panel.setActive = vi.fn()
 		;(
 			captured!.handle as unknown as {
 				setVisible: (id: string, visible: boolean) => void
 				setActive: (id: string) => void
 			}
 		).setVisible(h2.id, false)
-		expect(panel.setVisible).toHaveBeenCalledWith(false)
+		expect(panel.api.setVisible).toHaveBeenCalledWith(false)
 		;(
 			captured!.handle as unknown as {
 				setVisible: (id: string, visible: boolean) => void
 				setActive: (id: string) => void
 			}
 		).setActive(h2.id)
-		expect(panel.setActive).toHaveBeenCalledWith(true)
+		expect(panel.api.setActive).toHaveBeenCalledWith()
 		expect(() =>
 			(
 				captured!.handle as unknown as {

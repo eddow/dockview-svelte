@@ -42,7 +42,12 @@
 		 * sveltish cell count — no manual `onDidAddPanel` counting needed.
 		 */
 		panels?: IGridviewPanel[]
-		/** `bind:activePanel` — the currently active cell (mirrors `onDidActivePanelChange`). */
+		/**
+		 * `bind:activePanel` — the currently active cell. Derived from the
+		 * per-panel `api.onDidActiveChange` (via the factory) plus explicit sync
+		 * on the open/remove paths — `GridviewApi.onDidActivePanelChange` only
+		 * fires on focus-driven activation, never on programmatic adds.
+		 */
 		activePanel?: IGridviewPanel | undefined
 		/** Extra classes for the root container. */
 		class?: string
@@ -129,6 +134,17 @@
 		panels = [...api.panels]
 	}
 
+	/**
+	 * Set `bind:activePanel` + fire `onDidActivePanelChange`, deduped on panel
+	 * id. Per-panel `onDidActiveChange` fires on both the deactivated and the
+	 * activated cell, so the guard keeps a single update per activation.
+	 */
+	function setActivePanel(panel: IGridviewPanel | undefined): void {
+		if (activePanel?.id === panel?.id) return
+		activePanel = panel
+		onDidActivePanelChange?.(panel)
+	}
+
 	function getPanelOrThrow(id: string): import('dockview').GridviewPanel {
 		const panel = api!.getPanel(id)
 		if (!panel) {
@@ -156,9 +172,15 @@
 			component: key,
 			params: opts?.params ?? {}
 		})
-		// `addPanel` fires no observed event for the open path itself — refresh the
-		// bound panels/layout directly so `bind:panels` reflects the new cell.
+		// `addPanel` fires no event the component observes for the open path
+		// itself (events cover external mutations) — refresh the bound
+		// panels/layout directly so `bind:panels` reflects the new cell.
+		// `doSetGroupActive` inside `addPanel` fires per-panel
+		// `onDidActiveChange`, which the factory mirrors to `state.active`
+		// but the component does not observe — so sync `bind:activePanel`
+		// explicitly.
 		emitLayout()
+		setActivePanel(panel)
 
 		const state = factory?.getState(id)
 		// `state` is `GridviewState<Record<string, unknown>>` at the factory
@@ -174,7 +196,12 @@
 		if (!api) {
 			throw new Error('dockview-svelte: Gridview is not mounted yet')
 		}
-		api.removePanel(getPanelOrThrow(id))
+		const removed = getPanelOrThrow(id)
+		const wasActive = activePanel?.id === removed.id
+		api.removePanel(removed)
+		// Removal fires no active event either — fall back to the last
+		// remaining cell when the active one was removed.
+		if (wasActive) setActivePanel(api.panels.at(-1))
 	}
 
 	/** Move a cell relative to a reference panel. */
@@ -189,22 +216,20 @@
 		})
 	}
 
-	/** Show or hide a cell by id. `GridviewApi` omits `setVisible` (it lives on
-	 * the panel view itself), so this delegates to the panel. */
+	/** Show or hide a cell by id (via the panel api — `panel.setVisible` only fires `onDidVisibilityChange` without touching the layout). */
 	function setVisible(id: string, visible: boolean): void {
 		if (!api) {
 			throw new Error('dockview-svelte: Gridview is not mounted yet')
 		}
-		getPanelOrThrow(id).setVisible(visible)
+		getPanelOrThrow(id).api.setVisible(visible)
 	}
 
-	/** Activate a cell by id. `GridviewApi` omits `setActive` (it lives on
-	 * the panel view itself), so this delegates to the panel. */
+	/** Activate a cell by id (via the panel api — `panel.setActive` only fires `onDidActiveChange`). */
 	function setActive(id: string): void {
 		if (!api) {
 			throw new Error('dockview-svelte: Gridview is not mounted yet')
 		}
-		getPanelOrThrow(id).setActive(true)
+		getPanelOrThrow(id).api.setActive()
 	}
 
 	let factory: ReturnType<typeof createGridviewFactory> | undefined
@@ -228,7 +253,9 @@
 	})
 
 	onMount(() => {
-		factory = createGridviewFactory(registry, context)
+		factory = createGridviewFactory(registry, context, {
+			onDidActivePanelChange: (panel) => setActivePanel(panel as unknown as IGridviewPanel)
+		})
 		const createdApi = createGridview(container, {
 			...options,
 			orientation: options.orientation ?? Orientation.HORIZONTAL,
@@ -266,15 +293,23 @@
 			}),
 			createdApi.onDidAddPanel((panel: IGridviewPanel) => {
 				refreshPanels()
+				// External adds (e.g. `api.addPanel` escape hatch) activate the
+				// new cell without a component-level event — same sync as the
+				// `openPanel` path.
+				setActivePanel(panel)
 				onDidAddPanel?.(panel)
 			}),
 			createdApi.onDidRemovePanel((panel: IGridviewPanel) => {
 				refreshPanels()
+				if (activePanel?.id === panel.id) setActivePanel(createdApi.panels.at(-1))
 				onDidRemovePanel?.(panel)
 			}),
 			createdApi.onDidActivePanelChange((panel: IGridviewPanel | undefined) => {
-				activePanel = panel
-				onDidActivePanelChange?.(panel)
+				// Focus-driven activation path (`registerPanel` wires
+				// `onDidFocusChange` → `doSetGroupActive`). Programmatic
+				// activation (`api.setActive`, `addPanel`) only fires the
+				// per-panel event, handled via the factory hook below.
+				setActivePanel(panel)
 			})
 		]
 		// Seed the initial panels before exposing the handle.

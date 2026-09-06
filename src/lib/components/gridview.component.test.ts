@@ -22,15 +22,14 @@ const { makeFakeGridviewApi } = vi.hoisted(() => {
 		}
 		const panels: Array<{
 			id: string
-			setVisible: ReturnType<typeof vi.fn>
-			setActive: ReturnType<typeof vi.fn>
+			api: { setVisible: ReturnType<typeof vi.fn>; setActive: ReturnType<typeof vi.fn> }
 		}> = []
 		const api = {
 			get panels() {
 				return panels
 			},
 			addPanel: vi.fn((opts: { id: string; component: string; params?: unknown }) => {
-				const panel = { id: opts.id, setVisible: vi.fn(), setActive: vi.fn() }
+				const panel = { id: opts.id, api: { setVisible: vi.fn(), setActive: vi.fn() } }
 				panels.push(panel)
 				return panel
 			}),
@@ -134,6 +133,8 @@ describe('Gridview component logic', () => {
 		expect(text(view, 'layout-snapshot')).not.toBe('none')
 		expect(text(view, 'panels-count')).toBe('2')
 		expect(text(view, 'panels-ids')).toBe('a-1,a-2')
+		// The newly opened cell is active (mirrors dockview's `addPanel` behavior).
+		expect(text(view, 'active-id')).toBe('a-2')
 		view.unmount()
 	})
 
@@ -188,11 +189,18 @@ describe('Gridview component logic', () => {
 		const h = (captured!.handle as unknown as H).openPanel('a')
 		await flush()
 		expect(text(view, 'panels-count')).toBe('1')
+		expect(text(view, 'active-id')).toBe(h.id)
 
 		;(captured!.handle as unknown as H).setVisible(h.id, false)
-		expect(captured!.api.getPanel(h.id)?.setVisible).toHaveBeenCalledWith(false)
+		expect(
+			(captured!.api.getPanel(h.id) as unknown as { api: { setVisible: unknown } }).api
+				.setVisible
+		).toHaveBeenCalledWith(false)
 		;(captured!.handle as unknown as H).setActive(h.id)
-		expect(captured!.api.getPanel(h.id)?.setActive).toHaveBeenCalledWith(true)
+		expect(
+			(captured!.api.getPanel(h.id) as unknown as { api: { setActive: unknown } }).api
+				.setActive
+		).toHaveBeenCalledWith()
 		;(captured!.handle as unknown as H).movePanel(h.id, {
 			direction: 'right',
 			reference: h.id,
@@ -202,6 +210,7 @@ describe('Gridview component logic', () => {
 		;(captured!.handle as unknown as H).removePanel(h.id)
 		await flush()
 		expect(text(view, 'panels-count')).toBe('0')
+		expect(text(view, 'active-id')).toBe('none')
 		view.unmount()
 	})
 

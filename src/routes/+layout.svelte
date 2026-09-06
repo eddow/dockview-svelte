@@ -49,7 +49,7 @@
 		'/demos/splitview': ['SplitPanel.svelte'],
 		'/demos/gridview': ['GridCell.svelte'],
 		'/demos/paneview': ['PaneBody.svelte', 'PaneHeader.svelte'],
-		'/demos/declarative': ['BasicPanel.svelte']
+		'/demos/declarative': []
 	}
 
 	let pathname = $derived(page.url.pathname)
@@ -69,20 +69,27 @@
 
 	function toggleCode(): void {
 		if (!splitHandle) return
+		// Don't flip `codeVisible` here — `api.setVisible` fires
+		// `onDidVisibilityChange` synchronously, and the `$effect` below syncs
+		// `codeVisible` from it. A manual flip would read the already-updated
+		// value and flip it straight back.
 		splitHandle.setVisible('code', !codeVisible)
-		codeVisible = !codeVisible
 	}
 
 	// Keep the toggle in sync when the code pane is hidden/shown through any
-	// other path (sash snap, api escape hatch).
-	$effect(() => {
+	// other path (sash snap, api escape hatch). Subscribed once the panels exist
+	// — a `$effect` on `splitHandle` alone would run before `onMount` opens the
+	// panels (`getPanel` → undefined) and never re-run, missing every event.
+	let visibilityDisposable: { dispose(): void } | undefined
+
+	function syncCodeVisible(): void {
+		visibilityDisposable?.dispose()
 		const code = splitHandle?.api.getPanel('code')
 		if (!code) return
-		const sub = code.api.onDidVisibilityChange((event) => {
+		visibilityDisposable = code.api.onDidVisibilityChange((event) => {
 			codeVisible = event.isVisible
 		})
-		return () => sub.dispose()
-	})
+	}
 
 	onMount(() => {
 		// `splitHandle` is bound by the child `<Splitview>` (child `onMount`
@@ -97,6 +104,7 @@
 		// collapses the pane to zero footprint (not just `display:none`).
 		splitHandle.setVisible('code', false)
 		codeVisible = false
+		syncCodeVisible()
 	})
 </script>
 
@@ -212,6 +220,13 @@
 	.split-wrap {
 		flex: 1;
 		min-height: 0;
+		/* Dockview sashes default to transparent — give the demo/code
+		divider a resting color visible against both the light demo pane
+		and the dark code pane, plus an instant hover highlight. */
+		--dv-sash-color: #8b949e;
+		--dv-active-sash-color: #1f6feb;
+		--dv-active-sash-transition-delay: 0s;
+		--dv-separator-border: #8b949e;
 	}
 	.pane-scroll {
 		height: 100%;

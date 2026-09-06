@@ -1,23 +1,23 @@
 <script lang="ts">
-	import Paneview from './Paneview.svelte'
+import Paneview from './Paneview.svelte'
 
-	let {
-		widgets = {},
-		options = {},
-		layout = $bindable(undefined),
-		onReady
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	}: any = $props()
-
+let {
+	widgets = {},
+	options = {},
+	layout = $bindable(undefined),
+	onReady,
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	let panels: any[] = $state([])
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	let handle: any = $state(undefined)
-	let layoutSnapshot: string = $state('none')
+}: any = $props()
 
-	$effect(() => {
-		layoutSnapshot = layout === undefined ? 'none' : JSON.stringify(layout)
-	})
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let panels: any[] = $state([])
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let handle: any = $state(undefined)
+let layoutSnapshot: string = $state('none')
+
+$effect(() => {
+	layoutSnapshot = layout === undefined ? 'none' : JSON.stringify(layout)
+})
 </script>
 
 <Paneview {widgets} {options} bind:layout bind:panels bind:handle {onReady} />
