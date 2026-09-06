@@ -1,86 +1,157 @@
 <script lang="ts">
-import 'dockview/dist/styles/dockview.css'
-import '../app.css'
-import type { Snippet } from 'svelte'
-import { page } from '$app/state'
-import Code from './demos/Code.svelte'
+	import 'dockview/dist/styles/dockview.css'
+	import '../app.css'
+	import { Orientation } from 'dockview'
+	import type { Snippet } from 'svelte'
+	import { onMount } from 'svelte'
+	import { page } from '$app/state'
+	import { DvWidget, Splitview, type SplitviewHandle } from '$lib/index.js'
+	import Code from './demos/Code.svelte'
 
-let { children }: { children: Snippet } = $props()
+	let { children: pageChildren }: { children: Snippet } = $props()
 
-const demos = [
-	{ href: '/demos/basic', label: 'Basic: open a widget' },
-	{ href: '/demos/params', label: 'Reactive params (two-way)' },
-	{ href: '/demos/custom-tab', label: 'Custom tab + shared state' },
-	{ href: '/demos/layout', label: 'Save / restore bind:layout' },
-	{ href: '/demos/themes', label: 'Themes' },
-	{ href: '/demos/events', label: 'bind:active + events' },
-	{ href: '/demos/empty', label: 'Empty state (watermark)' },
-	{ href: '/demos/floating', label: 'Floating groups' },
-	{ href: '/demos/splitview', label: 'Splitview' },
-	{ href: '/demos/gridview', label: 'Gridview' },
-	{ href: '/demos/paneview', label: 'Paneview' },
-	{ href: '/demos/declarative', label: 'Declarative widgets' },
-] as const
+	const demos = [
+		{ href: '/demos/basic', label: 'Basic: open a widget' },
+		{ href: '/demos/params', label: 'Reactive params (two-way)' },
+		{ href: '/demos/custom-tab', label: 'Custom tab + shared state' },
+		{ href: '/demos/layout', label: 'Save / restore bind:layout' },
+		{ href: '/demos/themes', label: 'Themes' },
+		{ href: '/demos/events', label: 'bind:active + events' },
+		{ href: '/demos/empty', label: 'Empty state (watermark)' },
+		{ href: '/demos/floating', label: 'Floating groups' },
+		{ href: '/demos/splitview', label: 'Splitview' },
+		{ href: '/demos/gridview', label: 'Gridview' },
+		{ href: '/demos/paneview', label: 'Paneview' },
+		{ href: '/demos/declarative', label: 'Declarative widgets' }
+	] as const
 
-const pageSources = import.meta.glob('./demos/*/+page.svelte', {
-	query: '?raw',
-	import: 'default',
-	eager: true,
-}) as Record<string, string>
+	const pageSources = import.meta.glob('./demos/*/+page.svelte', {
+		query: '?raw',
+		import: 'default',
+		eager: true
+	}) as Record<string, string>
 
-const widgetSources = import.meta.glob('./demos/_widgets/*.svelte', {
-	query: '?raw',
-	import: 'default',
-	eager: true,
-}) as Record<string, string>
+	const widgetSources = import.meta.glob('./demos/_widgets/*.svelte', {
+		query: '?raw',
+		import: 'default',
+		eager: true
+	}) as Record<string, string>
 
-const demoWidgets: Record<string, string[]> = {
-	'/demos/basic': ['BasicPanel.svelte'],
-	'/demos/params': ['CounterPanel.svelte'],
-	'/demos/custom-tab': ['InboxPanel.svelte', 'BadgeTab.svelte'],
-	'/demos/layout': ['BasicPanel.svelte'],
-	'/demos/themes': ['BasicPanel.svelte'],
-	'/demos/events': ['BasicPanel.svelte'],
-	'/demos/empty': ['BasicPanel.svelte', 'EmptyWatermark.svelte'],
-	'/demos/floating': ['BasicPanel.svelte', 'GroupHeaderActions.svelte', 'PanelHeaderTab.svelte'],
-	'/demos/splitview': ['SplitPanel.svelte'],
-	'/demos/gridview': ['GridCell.svelte'],
-	'/demos/paneview': ['PaneBody.svelte', 'PaneHeader.svelte'],
-	'/demos/declarative': ['BasicPanel.svelte'],
-}
+	const demoWidgets: Record<string, string[]> = {
+		'/demos/basic': ['BasicPanel.svelte'],
+		'/demos/params': ['CounterPanel.svelte'],
+		'/demos/custom-tab': ['InboxPanel.svelte', 'BadgeTab.svelte'],
+		'/demos/layout': ['BasicPanel.svelte'],
+		'/demos/themes': ['BasicPanel.svelte'],
+		'/demos/events': ['BasicPanel.svelte'],
+		'/demos/empty': ['BasicPanel.svelte', 'EmptyWatermark.svelte'],
+		'/demos/floating': ['BasicPanel.svelte', 'GroupHeaderActions.svelte', 'PanelHeaderTab.svelte'],
+		'/demos/splitview': ['SplitPanel.svelte'],
+		'/demos/gridview': ['GridCell.svelte'],
+		'/demos/paneview': ['PaneBody.svelte', 'PaneHeader.svelte'],
+		'/demos/declarative': ['BasicPanel.svelte']
+	}
 
-let pathname = $derived(page.url.pathname)
-let pageSource = $derived(pageSources[`.${pathname}/+page.svelte`])
-let widgetCodes = $derived(
-	(demoWidgets[pathname] ?? [])
-		.map((file) => ({ file, code: widgetSources[`./demos/_widgets/${file}`] }))
-		.filter((w) => w.code)
-)
+	let pathname = $derived(page.url.pathname)
+	let pageSource = $derived(pageSources[`.${pathname}/+page.svelte`])
+	let widgetCodes = $derived(
+		(demoWidgets[pathname] ?? [])
+			.map((file) => ({ file, code: widgetSources[`./demos/_widgets/${file}`] }))
+			.filter((w) => w.code)
+	)
+
+	// Demo/code split: demo on the left, source on the right (collapsed by
+	// default). The layout persists across demo navigation, so the panes are
+	// opened once and the code visibility survives route changes.
+	let splitHandle = $state<SplitviewHandle | undefined>(undefined)
+	let codeVisible = $state(false)
+	let opened = false
+
+	function toggleCode(): void {
+		if (!splitHandle) return
+		splitHandle.setVisible('code', !codeVisible)
+		codeVisible = !codeVisible
+	}
+
+	// Keep the toggle in sync when the code pane is hidden/shown through any
+	// other path (sash snap, api escape hatch).
+	$effect(() => {
+		const code = splitHandle?.api.getPanel('code')
+		if (!code) return
+		const sub = code.api.onDidVisibilityChange((event) => {
+			codeVisible = event.isVisible
+		})
+		return () => sub.dispose()
+	})
+
+	onMount(() => {
+		// `splitHandle` is bound by the child `<Splitview>` (child `onMount`
+		// runs before the parent's), but guard anyway and open exactly once.
+		if (opened || !splitHandle) return
+		opened = true
+		splitHandle.openPanel('demo', { id: 'demo', minimumSize: 200 })
+		splitHandle.openPanel('code', { id: 'code', minimumSize: 280, size: 480 })
+		// Begin collapsed: the demo gets the full width until the user asks
+		// for the source via the toolbar toggle. `setVisible` routes through
+		// `onWillVisibilityChange` → `accessor.setVisible`, so the sash
+		// collapses the pane to zero footprint (not just `display:none`).
+		splitHandle.setVisible('code', false)
+		codeVisible = false
+	})
 </script>
 
-<header>
-	<nav aria-label="Demos">
-		<a href="/">dockview-svelte</a>
-		<ul>
-			{#each demos as demo (demo.href)}
-				<li><a href={demo.href}>{demo.label}</a></li>
-			{/each}
-		</ul>
-	</nav>
-</header>
+<div class="shell">
+	<header>
+		<nav aria-label="Demos">
+			<a href="/">dockview-svelte</a>
+			<ul>
+				{#each demos as demo (demo.href)}
+					<li><a href={demo.href}>{demo.label}</a></li>
+				{/each}
+			</ul>
+		</nav>
+	</header>
 
-<main>
-	{@render children()}
+	<div class="toolbar">
+		<button onclick={toggleCode} aria-expanded={codeVisible} aria-controls="demo-source">
+			{codeVisible ? 'Hide code' : 'Show code'}
+		</button>
+		<span class="toolbar__hint"
+			>demo on the left, source on the right — drag the sash to resize</span
+		>
+	</div>
 
-	{#if pageSource}
-		<section aria-label="Demo source">
-			<Code code={pageSource} title="+page.svelte" />
-			{#each widgetCodes as { file, code } (file)}
-				<Code {code} title={file} />
-			{/each}
-		</section>
-	{/if}
-</main>
+	<main class="split-wrap">
+		<Splitview
+			bind:handle={splitHandle}
+			options={{ orientation: Orientation.HORIZONTAL, proportionalLayout: true }}
+		>
+			<DvWidget name="demo">
+				{#snippet children()}
+					<div class="pane-scroll">
+						{@render pageChildren()}
+					</div>
+				{/snippet}
+			</DvWidget>
+			<DvWidget name="code">
+				{#snippet children()}
+					<div class="pane-scroll" id="demo-source">
+						{#if pageSource}
+							<section class="code-stack" aria-label="Demo source">
+								<Code code={pageSource} title="+page.svelte" />
+								{#each widgetCodes as { file, code } (file)}
+									<Code {code} title={file} />
+								{/each}
+							</section>
+						{:else}
+							<p>Pick a demo to see its source.</p>
+						{/if}
+					</div>
+				{/snippet}
+			</DvWidget>
+		</Splitview>
+	</main>
+</div>
 
 <style>
 	header {
@@ -112,7 +183,45 @@ let widgetCodes = $derived(
 		color: inherit;
 		opacity: 0.85;
 	}
-	main {
+	.shell {
+		display: flex;
+		flex-direction: column;
+		height: 100dvh;
+	}
+	.toolbar {
+		display: flex;
+		gap: 0.75rem;
+		align-items: center;
+		padding: 0.4rem 1rem;
+		border-bottom: 1px solid #30363d;
+		background: #0d1117;
+		color: #e6edf3;
+	}
+	.toolbar button {
+		cursor: pointer;
+		border: 1px solid #30363d;
+		border-radius: 6px;
+		background: #161b22;
+		color: inherit;
+		padding: 0.25rem 0.75rem;
+	}
+	.toolbar__hint {
+		opacity: 0.7;
+		font-size: 0.85rem;
+	}
+	.split-wrap {
+		flex: 1;
+		min-height: 0;
+	}
+	.pane-scroll {
+		height: 100%;
+		overflow: auto;
 		padding: 1rem;
+		box-sizing: border-box;
+	}
+	.code-stack {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
 	}
 </style>

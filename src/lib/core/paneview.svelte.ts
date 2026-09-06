@@ -75,6 +75,7 @@ function createPanePart(
 	let effectDestroy: (() => void) | undefined
 	let lastParams: unknown
 	let lastActive = false
+	let lastVisible = true
 	let lastExpanded = false
 
 	return {
@@ -92,6 +93,7 @@ function createPanePart(
 
 			lastParams = $state.snapshot(state.params)
 			lastActive = state.active
+			lastVisible = state.visible
 			lastExpanded = state.expanded
 
 			// The body owns the api mirrors + widget→dockview effects; the header
@@ -107,6 +109,7 @@ function createPanePart(
 					}),
 					parameters.api.onDidVisibilityChange((event) => {
 						state!.visible = event.isVisible
+						lastVisible = event.isVisible
 					}),
 					parameters.api.onDidDimensionsChange((event) => {
 						cancelAnimationFrame(raf)
@@ -134,6 +137,13 @@ function createPanePart(
 						// Only activation is meaningful from the widget side.
 						if (state!.active && !lastActive) {
 							state!.api.setActive()
+						}
+					})
+
+					$effect(() => {
+						if (state!.visible !== lastVisible) {
+							lastVisible = state!.visible
+							state!.api.setVisible(state!.visible)
 						}
 					})
 

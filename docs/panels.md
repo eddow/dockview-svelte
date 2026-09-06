@@ -133,6 +133,17 @@ The four booleans are mirrors of dockview's own per-panel state:
 their `onDid*` events). `active` is writable (writing `true` calls `setActive`,
 `false` is ignored) and `pinned` is two-way; the rest are read-only.
 
+Splitview/Gridview/Paneview states differ in one respect: `visible` is
+two-way there (writing `state.visible` calls `api.setVisible`), mirroring the
+`handle.setVisible(id, visible)` / `handle.setActive(id)` helpers on
+`SplitviewHandle`, `GridviewHandle` and `PaneviewHandle`. The loop-break is the
+same capture pattern as `active`/`pinned`: the dockview → widget event updates
+both the field and its `last*` guard, so the widget → dockview `$effect` only
+fires on genuine widget writes. `SplitviewApi`/`GridviewApi`/`PaneviewApi`
+expose no `setVisible`/`setActive`, so the handle delegates to the panel view
+(`getPanel(id).setVisible(...)` / `setActive(true)`), throwing
+`unknown panel "<id>"` for bad ids — the same convention as `removePanel`.
+
 ## 4. Title & header resolution
 
 Both resolve against the same `widgets[key]` entry, once at open time.

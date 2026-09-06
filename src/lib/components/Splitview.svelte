@@ -33,7 +33,7 @@
 		options?: Omit<SplitviewComponentOptions, 'createComponent'>
 		/** `bind:layout` — splitview JSON (`toJSON`/`fromJSON` shape). */
 		layout?: SerializedSplitview
-		/** `bind:handle` — `{ api, openPanel, registerWidget, removePanel, movePanel }`. */
+		/** `bind:handle` — `{ api, openPanel, registerWidget, removePanel, movePanel, setVisible, setActive }`. */
 		handle?: SplitviewHandle<W>
 		/**
 		 * `bind:views` — reactive list of current views (`api.panels` snapshot).
@@ -174,6 +174,30 @@
 		api.movePanel(from, to)
 	}
 
+	function getPanelOrThrow(id: string): import('dockview').SplitviewPanel {
+		const panel = api!.getPanel(id)
+		if (!panel) {
+			throw new Error(`dockview-svelte: unknown panel "${id}"`)
+		}
+		return panel as import('dockview').SplitviewPanel
+	}
+
+	/** Show or hide a split pane by id (via the panel view — `SplitviewApi` has no `setVisible`). */
+	function setVisible(id: string, visible: boolean): void {
+		if (!api) {
+			throw new Error('dockview-svelte: Splitview is not mounted yet')
+		}
+		getPanelOrThrow(id).setVisible(visible)
+	}
+
+	/** Activate a split pane by id (via the panel view — `SplitviewApi` has no `setActive`). */
+	function setActive(id: string): void {
+		if (!api) {
+			throw new Error('dockview-svelte: Splitview is not mounted yet')
+		}
+		getPanelOrThrow(id).setActive(true)
+	}
+
 	let factory: ReturnType<typeof createSplitviewFactory> | undefined
 
 	// External `layout` changes → apply via `fromJSON` (loop-break via `lastEmitted`).
@@ -214,7 +238,9 @@
 			openPanel,
 			registerWidget,
 			removePanel,
-			movePanel
+			movePanel,
+			setVisible,
+			setActive
 		}
 		handle = createdHandle
 

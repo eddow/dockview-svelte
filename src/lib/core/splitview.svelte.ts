@@ -76,6 +76,7 @@ class SvelteSplitviewPanel extends SplitviewPanelBase {
 	private effectDestroy: (() => void) | undefined
 	private lastParams: unknown
 	private lastActive = false
+	private lastVisible = true
 	private raf = 0
 
 	constructor(id: string, name: string, deps: SplitviewPanelDeps) {
@@ -98,6 +99,7 @@ class SvelteSplitviewPanel extends SplitviewPanelBase {
 
 		this.lastParams = $state.snapshot(this.state.params)
 		this.lastActive = this.state.active
+		this.lastVisible = this.state.visible
 
 		// Read-only mirrors of the api flags. `size` is rAF-throttled —
 		// `onDidDimensionsChange` fires per-pixel on sash drags, exactly like the
@@ -112,6 +114,7 @@ class SvelteSplitviewPanel extends SplitviewPanelBase {
 			}),
 			this.api.onDidVisibilityChange((event) => {
 				this.state!.visible = event.isVisible
+				this.lastVisible = event.isVisible
 			}),
 			this.api.onDidDimensionsChange((event) => {
 				cancelAnimationFrame(this.raf)
@@ -135,6 +138,13 @@ class SvelteSplitviewPanel extends SplitviewPanelBase {
 				// Only activation is meaningful from the widget side.
 				if (this.state!.active && !this.lastActive) {
 					this.state!.api.setActive()
+				}
+			})
+
+			$effect(() => {
+				if (this.state!.visible !== this.lastVisible) {
+					this.lastVisible = this.state!.visible
+					this.state!.api.setVisible(this.state!.visible)
 				}
 			})
 		})

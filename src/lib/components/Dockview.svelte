@@ -510,6 +510,8 @@
 	.dv-svelte-watermark-overlay {
 		position: absolute;
 		inset: 0;
-		z-index: 1;
+		/* Above dockview's own `.dv-watermark-container` (z-index 1, later in
+		DOM) — otherwise it paints over us and swallows overlay clicks. */
+		z-index: 2;
 	}
 </style>

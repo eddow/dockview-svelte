@@ -26,8 +26,16 @@ test('basic demo opens a widget with highlighted source', async ({ page }) => {
 
 	await expect(page.getByRole('tab', { name: /Basic/ })).toBeVisible()
 	await expect(page.getByRole('tabpanel').getByText('Hello from a widget')).toBeVisible()
+	// Code starts collapsed (zero-width pane); the toggle reveals it.
+	const toggle = page.getByRole('button', { name: 'Show code' })
+	await expect(toggle).toBeVisible()
+	await toggle.click()
+	await expect(page.getByRole('button', { name: 'Hide code' })).toBeVisible()
 	// Display-only Shiki block shows the demo source.
 	await expect(page.getByText('openPanel', { exact: false }).first()).toBeVisible()
+	// Hiding collapses the pane again.
+	await page.getByRole('button', { name: 'Hide code' }).click()
+	await expect(page.getByRole('button', { name: 'Show code' })).toBeVisible()
 })
 
 test('params demo round-trips reactive params', async ({ page }) => {
@@ -162,9 +170,9 @@ test('empty demo shows watermark and opens from it', async ({ page }) => {
 
 	const watermarkText = page.locator('.dv-svelte-watermark-overlay p')
 	await expect(watermarkText).toBeVisible()
-	// The watermark button sits in an overlay (Playwright actionability
-	// check fails) — dispatch the click directly instead.
-	await page.locator('.dv-svelte-watermark-overlay button').dispatchEvent('click')
+	// Real click (not dispatchEvent): the overlay must sit above dockview's
+	// own `.dv-watermark-container` or the click is swallowed.
+	await page.locator('.dv-svelte-watermark-overlay button').click()
 	await expect(page.getByRole('tab', { name: 'A' })).toBeVisible()
 	await page.getByRole('button', { name: 'close all' }).click()
 	await expect(watermarkText).toBeVisible()

@@ -242,7 +242,7 @@ export interface SplitviewState<P = Record<string, unknown>> {
 	params: P
 	/** Written by the renderer's `layout()` hook via `api.onDidDimensionsChange`. */
 	size: { width: number; height: number }
-	/** dockview `api.isVisible` — read-only mirror. */
+	/** dockview `api.isVisible` — two-way (`setVisible`). */
 	visible: boolean
 	/** dockview `api.isActive` — write `true` to activate (writing `false` is ignored). */
 	active: boolean
@@ -314,6 +314,10 @@ export interface SplitviewHandle<W extends SplitviewWidgets = SplitviewWidgets> 
 	removePanel: (id: string) => void
 	/** Move a split pane from one index to another. */
 	movePanel: (from: number, to: number) => void
+	/** Show or hide a split pane by id. */
+	setVisible: (id: string, visible: boolean) => void
+	/** Activate a split pane by id. */
+	setActive: (id: string) => void
 }
 
 // ===== Gridview =====
@@ -327,7 +331,7 @@ export interface GridviewState<P = Record<string, unknown>> {
 	params: P
 	/** Written by the renderer's `layout()` hook, rAF-throttled. */
 	size: { width: number; height: number }
-	/** dockview `api.isVisible` — read-only mirror. */
+	/** dockview `api.isVisible` — two-way (`setVisible`). */
 	visible: boolean
 	/** dockview `api.isActive` — write `true` to activate (writing `false` is ignored). */
 	active: boolean
@@ -428,7 +432,7 @@ export interface PaneviewState<P = Record<string, unknown>> {
 	params: P
 	/** Written by the renderer's `layout()` hook, rAF-throttled. */
 	size: { width: number; height: number }
-	/** dockview `api.isVisible` — read-only mirror. */
+	/** dockview `api.isVisible` — two-way (`setVisible`). */
 	visible: boolean
 	/** dockview `api.isActive` — write `true` to activate (writing `false` is ignored). */
 	active: boolean

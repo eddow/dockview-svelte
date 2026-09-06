@@ -147,7 +147,7 @@ describe('Splitview component logic', () => {
 		view.unmount()
 	})
 
-	it('removePanel and movePanel delegate to the api', async () => {
+	it('removePanel, movePanel, setVisible and setActive delegate to the api', async () => {
 		let captured: { api: ReturnType<typeof makeFakeSplitviewApi>; handle: never } | undefined
 		const view = render(SplitviewHost, {
 			props: {
@@ -164,6 +164,8 @@ describe('Splitview component logic', () => {
 				openPanel: (k: string) => { id: string }
 				removePanel: (id: string) => void
 				movePanel: (from: number, to: number) => void
+				setVisible: (id: string, visible: boolean) => void
+				setActive: (id: string) => void
 			}
 		).openPanel('a')
 		await flush()
@@ -174,6 +176,8 @@ describe('Splitview component logic', () => {
 			captured!.handle as unknown as {
 				removePanel: (id: string) => void
 				movePanel: (from: number, to: number) => void
+				setVisible: (id: string, visible: boolean) => void
+				setActive: (id: string) => void
 			}
 		).removePanel(h.id)
 		await flush()
@@ -188,6 +192,44 @@ describe('Splitview component logic', () => {
 			1
 		)
 		expect(captured!.api.movePanel).toHaveBeenCalledWith(0, 1)
+
+		// `setVisible`/`setActive` delegate to the panel view (the fake api
+		// has no `setVisible` — the panel object carries `setVisible`).
+		const h2 = (
+			captured!.handle as unknown as {
+				openPanel: (k: string) => { id: string }
+				setVisible: (id: string, visible: boolean) => void
+				setActive: (id: string) => void
+			}
+		).openPanel('a')
+		await flush()
+		const panel = captured!.api.getPanel(h2.id) as unknown as {
+			setVisible: ReturnType<typeof vi.fn>
+			setActive: ReturnType<typeof vi.fn>
+		}
+		panel.setVisible = vi.fn()
+		panel.setActive = vi.fn()
+		;(
+			captured!.handle as unknown as {
+				setVisible: (id: string, visible: boolean) => void
+				setActive: (id: string) => void
+			}
+		).setVisible(h2.id, false)
+		expect(panel.setVisible).toHaveBeenCalledWith(false)
+		;(
+			captured!.handle as unknown as {
+				setVisible: (id: string, visible: boolean) => void
+				setActive: (id: string) => void
+			}
+		).setActive(h2.id)
+		expect(panel.setActive).toHaveBeenCalledWith(true)
+		expect(() =>
+			(
+				captured!.handle as unknown as {
+					setVisible: (id: string, visible: boolean) => void
+				}
+			).setVisible('nope', true)
+		).toThrow('unknown panel "nope"')
 		view.unmount()
 	})
 
