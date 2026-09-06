@@ -276,6 +276,9 @@
 		} as AddPanelOptions
 
 		const panel = api.addPanel(addOptions)
+		// `addPanel` fires `onDidAddPanel` (which refreshes counts) but not a layout
+		// event — emit the layout directly so `bind:layout` reflects the new panel.
+		emitLayout()
 
 		const state = factory.getState(id)
 		return { id, panel, api: panel.api, state: state! } as PanelHandle<ParamsOf<W[K]['component']>>

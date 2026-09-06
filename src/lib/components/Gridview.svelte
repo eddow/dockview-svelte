@@ -156,6 +156,9 @@
 			component: key,
 			params: opts?.params ?? {}
 		})
+		// `addPanel` fires no observed event for the open path itself — refresh the
+		// bound panels/layout directly so `bind:panels` reflects the new cell.
+		emitLayout()
 
 		const state = factory?.getState(id)
 		// `state` is `GridviewState<Record<string, unknown>>` at the factory

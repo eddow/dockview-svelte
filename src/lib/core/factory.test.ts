@@ -1,10 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { expectUpdateParameters, flushEffects } from './effect-helpers.js'
 import { WidgetRegistry } from './registry.js'
 
-vi.mock('svelte', () => ({
-	mount: vi.fn(() => ({})),
-	unmount: vi.fn(),
-}))
+vi.mock('svelte', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('svelte')>()
+	return {
+		...actual,
+		mount: vi.fn(() => ({})),
+		unmount: vi.fn(),
+	}
+})
 
 vi.mock('../components/DefaultTab.svelte', () => ({
 	default: { name: 'DefaultTab' },
@@ -129,5 +134,96 @@ describe('createDockviewFactory', () => {
 		tabRenderer.dispose?.()
 		expect(factory.getState('p1')).toBeUndefined()
 		expect(unmount).toHaveBeenCalledTimes(2)
+	})
+
+	it('pushes widget params mutations to api.updateParameters', async () => {
+		const registry = new WidgetRegistry()
+		registry.register('chat', { component: { name: 'C' } } as never)
+
+		const factory = createDockviewFactory(registry)
+		const api = fakePanelApi('p1')
+		const content = factory.createComponent({ id: 'p1', name: 'chat' })
+		content.init({ api, params: { a: 1 }, title: 't' } as never)
+		await flushEffects()
+
+		factory.getState('p1')!.params = { a: 2 }
+		await flushEffects()
+		expectUpdateParameters(api, { a: 2 })
+	})
+
+	it('pushes widget activation to api.setActive', async () => {
+		const registry = new WidgetRegistry()
+		registry.register('chat', { component: { name: 'C' } } as never)
+
+		const factory = createDockviewFactory(registry)
+		const api = fakePanelApi('p1')
+		const content = factory.createComponent({ id: 'p1', name: 'chat' })
+		content.init({ api, params: {}, title: 't' } as never)
+		await flushEffects()
+
+		factory.getState('p1')!.active = true
+		await flushEffects()
+		expect(api.setActive).toHaveBeenCalled()
+	})
+
+	it('pushes widget pin toggles to api.setPinned', async () => {
+		const registry = new WidgetRegistry()
+		registry.register('chat', { component: { name: 'C' } } as never)
+
+		const factory = createDockviewFactory(registry)
+		const api = fakePanelApi('p1')
+		const content = factory.createComponent({ id: 'p1', name: 'chat' })
+		content.init({ api, params: {}, title: 't' } as never)
+		await flushEffects()
+
+		factory.getState('p1')!.pinned = true
+		await flushEffects()
+		expect(api.setPinned).toHaveBeenCalledWith(true)
+	})
+
+	it('does not re-push dockview-origin params updates (loop-break)', async () => {
+		const registry = new WidgetRegistry()
+		registry.register('chat', { component: { name: 'C' } } as never)
+
+		const factory = createDockviewFactory(registry)
+		const api = fakePanelApi('p1')
+		const content = factory.createComponent({ id: 'p1', name: 'chat' })
+		content.init({ api, params: { a: 1 }, title: 't' } as never)
+		await flushEffects()
+		expect(api.updateParameters).not.toHaveBeenCalled()
+
+		// dockview → widget: `update()` merges and re-baselines `lastParams`,
+		// so the widget → dockview effect must stay silent.
+		content.update?.({ params: { a: 2 } } as never)
+		await flushEffects()
+		expect(api.updateParameters).not.toHaveBeenCalled()
+		expect(factory.getState('p1')?.params).toEqual({ a: 2 })
+	})
+
+	it('coalesces rapid layout() calls into one size write', async () => {
+		const registry = new WidgetRegistry()
+		registry.register('chat', { component: { name: 'C' } } as never)
+
+		const factory = createDockviewFactory(registry)
+		const api = fakePanelApi('p1')
+		const content = factory.createComponent({ id: 'p1', name: 'chat' })
+		content.init({ api, params: {}, title: 't' } as never)
+
+		// Queue the rAF callbacks instead of running them inline, then flush.
+		const queue: FrameRequestCallback[] = []
+		vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+			queue.push(cb)
+			return queue.length
+		})
+		try {
+			content.layout?.(10, 10)
+			content.layout?.(20, 20)
+			content.layout?.(30, 30)
+			expect(factory.getState('p1')?.size).toEqual({ width: 0, height: 0 })
+			for (const cb of queue) cb(0)
+			expect(factory.getState('p1')?.size).toEqual({ width: 30, height: 30 })
+		} finally {
+			vi.unstubAllGlobals()
+		}
 	})
 })

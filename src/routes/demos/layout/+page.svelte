@@ -9,7 +9,18 @@ const widgets = defineWidgets({
 })
 
 /** Hard-coded initial layout: two panels side by side. */
-const initialLayout: SerializedDockview = {
+const stored =
+	typeof localStorage === 'undefined'
+		? undefined
+		: (() => {
+				try {
+					const raw = localStorage.getItem('dockview-svelte:layout-demo')
+					return raw ? (JSON.parse(raw) as SerializedDockview) : undefined
+				} catch {
+					return undefined
+				}
+			})()
+const initialLayout: SerializedDockview = stored ?? {
 	grid: {
 		root: {
 			type: 'branch',
@@ -53,6 +64,17 @@ const initialLayout: SerializedDockview = {
 let handle = $state<DockviewHandle<typeof widgets> | undefined>(undefined)
 let layout = $state<SerializedDockview | undefined>(initialLayout)
 let saved = $state<string | undefined>(undefined)
+
+// Persist `bind:layout` across page reloads so the layout demo doubles as the
+// persistence test (close a panel → reload → it stays closed).
+$effect(() => {
+	if (typeof localStorage === 'undefined' || !layout) return
+	try {
+		localStorage.setItem('dockview-svelte:layout-demo', JSON.stringify(layout))
+	} catch {
+		// Storage full or unavailable — the demo still works in-memory.
+	}
+})
 
 function save() {
 	saved = JSON.stringify(layout)

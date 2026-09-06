@@ -58,6 +58,7 @@
 	"keywords": [
 		"svelte"
 	],
+	"license": "AGPL-3.0-only",
 	"dependencies": {
 		"dockview": "^8.2.0"
 	}

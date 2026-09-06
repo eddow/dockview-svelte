@@ -38,6 +38,17 @@ describe('deepEqual', () => {
 		expect(deepEqual({ a: { b: 1 } }, { a: { b: 2 } })).toBe(false)
 		expect(deepEqual({ a: 1 }, { a: 1, b: 2 })).toBe(false)
 	})
+
+	it('handles undefined values, NaN, and nested arrays', () => {
+		expect(deepEqual({ a: undefined }, { a: undefined })).toBe(true)
+		expect(deepEqual({ a: undefined }, {})).toBe(false)
+		expect(deepEqual({ a: undefined }, { a: 1 })).toBe(false)
+		expect(deepEqual(NaN, NaN)).toBe(true)
+		expect(deepEqual({ v: NaN }, { v: NaN })).toBe(true)
+		expect(deepEqual({ v: NaN }, { v: 1 })).toBe(false)
+		expect(deepEqual({ a: [[1, 2], [3]] }, { a: [[1, 2], [3]] })).toBe(true)
+		expect(deepEqual({ a: [[1, 2], [3]] }, { a: [[1, 2], [4]] })).toBe(false)
+	})
 })
 
 describe('mergeInto', () => {
@@ -59,5 +70,14 @@ describe('mergeInto', () => {
 		const target = { a: [1, 2] }
 		mergeInto(target, { a: [3] })
 		expect(target).toEqual({ a: [3] })
+	})
+
+	it('does not reassign on a no-op merge', () => {
+		const nested = { x: 1 }
+		const arr = [1, 2]
+		const target: Record<string, unknown> = { a: 1, nested, arr }
+		mergeInto(target, { a: 1, nested: { x: 1 }, arr: [1, 2] })
+		expect(target.nested).toBe(nested)
+		expect(target.arr).toBe(arr)
 	})
 })

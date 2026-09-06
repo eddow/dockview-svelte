@@ -1,0 +1,258 @@
+import { cleanup, render } from '@testing-library/svelte'
+import { tick } from 'svelte'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import PaneviewHost from './PaneviewHost.test.svelte'
+
+/**
+ * Paneview component logic: `bind:layout` loop-break, `bind:panels` seeding +
+ * refresh, `options` → `updateOptions`, `nextId` counter, title resolution,
+ * and the `not mounted yet` / `unknown widget` / `unknown panel` throws.
+ *
+ * The real `createPaneview` is replaced with a controllable fake api; the
+ * real `createPaneviewFactory` is kept so `openPanel` exercises the registry
+ * + `nextId` path end to end.
+ */
+const { makeFakePaneviewApi } = vi.hoisted(() => {
+	const makeFakePaneviewApi = () => {
+		const listeners: Record<string, Array<(e: never) => void>> = {}
+		const on = (key: string) => (cb: (e: never) => void) => {
+			;(listeners[key] ??= []).push(cb)
+			return { dispose: vi.fn() }
+		}
+		const panels: Array<{
+			id: string
+			setVisible: ReturnType<typeof vi.fn>
+			setExpanded: ReturnType<typeof vi.fn>
+		}> = []
+		const api = {
+			get panels() {
+				return panels
+			},
+			addPanel: vi.fn(
+				(opts: { id: string; component: string; title?: string; params?: unknown }) => {
+					const panel = { id: opts.id, setVisible: vi.fn(), setExpanded: vi.fn() }
+					panels.push(panel)
+					return panel
+				}
+			),
+			getPanel: vi.fn((id: string) => panels.find((p) => p.id === id)),
+			removePanel: vi.fn((panel: { id: string }) => {
+				const i = panels.findIndex((p) => p.id === panel.id)
+				if (i >= 0) panels.splice(i, 1)
+				listeners.removeView?.forEach((cb) => cb({} as never))
+			}),
+			movePanel: vi.fn(),
+			fromJSON: vi.fn((_json: unknown) => {
+				listeners.layoutFromJSON?.forEach((cb) => cb({} as never))
+			}),
+			toJSON: vi.fn(() => ({ kind: 'paneview', views: panels.map((p) => p.id) })),
+			updateOptions: vi.fn(),
+			dispose: vi.fn(),
+			onDidLayoutChange: vi.fn(on('layoutChange')),
+			onDidLayoutFromJSON: vi.fn(on('layoutFromJSON')),
+			onDidAddView: vi.fn(on('addView')),
+			onDidRemoveView: vi.fn(on('removeView')),
+			onDidDrop: vi.fn(on('drop')),
+			onUnhandledDragOver: vi.fn(on('dragover')),
+			emitLayoutChange: () => listeners.layoutChange?.forEach((cb) => cb({} as never)),
+		}
+		return api
+	}
+	return { makeFakePaneviewApi }
+})
+
+vi.mock('dockview', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('dockview')>()
+	return {
+		...actual,
+		createPaneview: vi.fn(() => makeFakePaneviewApi()),
+	}
+})
+
+const { createPaneview } = await import('dockview')
+
+async function flush(rounds = 3): Promise<void> {
+	for (let i = 0; i < rounds; i++) await tick()
+}
+
+describe('Paneview component logic', () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+	})
+
+	afterEach(() => {
+		cleanup()
+	})
+
+	function text(view: { container: HTMLElement }, testid: string): string {
+		return view.container.querySelector(`[data-testid="${testid}"]`)?.textContent ?? ''
+	}
+
+	it('exposes a handle and seeds empty panels on mount', async () => {
+		let captured: { api: unknown; handle: unknown } | undefined
+		const view = render(PaneviewHost, {
+			props: {
+				widgets: { a: { component: { name: 'A' } } },
+				onReady: (e: { api: unknown; handle: unknown }) => {
+					captured = e
+				},
+			} as never,
+		})
+		await flush()
+
+		expect(captured).toBeDefined()
+		expect(text(view, 'has-handle')).toBe('yes')
+		expect(text(view, 'panels-count')).toBe('0')
+		view.unmount()
+	})
+
+	it('openPanel assigns sequential ids, resolves titles, and refreshes bind:panels', async () => {
+		let handle:
+			| {
+					openPanel: (key: string, opts?: Record<string, unknown>) => { id: string }
+			  }
+			| undefined
+		let apiRef: ReturnType<typeof makeFakePaneviewApi> | undefined
+		const view = render(PaneviewHost, {
+			props: {
+				widgets: { a: { component: { name: 'A' }, title: 'Widget Title' } },
+				onReady: (e: { api: typeof apiRef; handle: typeof handle }) => {
+					handle = e.handle
+					apiRef = e.api
+				},
+			} as never,
+		})
+		await flush()
+
+		const h1 = handle!.openPanel('a')
+		const h2 = handle!.openPanel('a', { title: 'Explicit' })
+		await flush()
+
+		expect(h1.id).toBe('a-1')
+		expect(h2.id).toBe('a-2')
+		expect(apiRef!.panels.map((p) => p.id)).toEqual(['a-1', 'a-2'])
+		// Title resolution: per-widget default, then explicit override.
+		expect(apiRef!.addPanel.mock.calls[0][0].title).toBe('Widget Title')
+		expect(apiRef!.addPanel.mock.calls[1][0].title).toBe('Explicit')
+		expect(text(view, 'layout-snapshot')).not.toBe('none')
+		expect(text(view, 'panels-count')).toBe('2')
+		expect(text(view, 'panels-ids')).toBe('a-1,a-2')
+		view.unmount()
+	})
+
+	it('throws for unknown widgets and unknown panels', async () => {
+		let handle:
+			| {
+					openPanel: (key: string) => unknown
+					removePanel: (id: string) => unknown
+					movePanel: (from: number, to: number) => unknown
+					setVisible: (id: string, v: boolean) => unknown
+					setExpanded: (id: string, v: boolean) => unknown
+			  }
+			| undefined
+		const view = render(PaneviewHost, {
+			props: {
+				widgets: {},
+				onReady: (e: { handle: typeof handle }) => {
+					handle = e.handle
+				},
+			} as never,
+		})
+		await flush()
+
+		expect(() => handle!.openPanel('missing')).toThrow('unknown widget "missing"')
+		expect(() => handle!.removePanel('nope')).toThrow('unknown panel "nope"')
+		expect(() => handle!.movePanel(0, 1)).not.toThrow()
+		expect(() => handle!.setVisible('nope', true)).toThrow('unknown panel "nope"')
+		expect(() => handle!.setExpanded('nope', true)).toThrow('unknown panel "nope"')
+		view.unmount()
+	})
+
+	it('removePanel / movePanel / setVisible / setExpanded delegate to the api', async () => {
+		let captured: { api: ReturnType<typeof makeFakePaneviewApi>; handle: never } | undefined
+		const view = render(PaneviewHost, {
+			props: {
+				widgets: { a: { component: { name: 'A' } } },
+				onReady: (e: typeof captured) => {
+					captured = e
+				},
+			} as never,
+		})
+		await flush()
+		type H = {
+			openPanel: (k: string) => { id: string }
+			removePanel: (id: string) => void
+			movePanel: (from: number, to: number) => void
+			setVisible: (id: string, v: boolean) => void
+			setExpanded: (id: string, v: boolean) => void
+		}
+		const h = (captured!.handle as unknown as H).openPanel('a')
+		await flush()
+		expect(text(view, 'panels-count')).toBe('1')
+
+		;(captured!.handle as unknown as H).setVisible(h.id, false)
+		expect(captured!.api.getPanel(h.id)?.setVisible).toHaveBeenCalledWith(false)
+		;(captured!.handle as unknown as H).setExpanded(h.id, false)
+		expect(captured!.api.getPanel(h.id)?.setExpanded).toHaveBeenCalledWith(false)
+		;(captured!.handle as unknown as H).movePanel(0, 1)
+		expect(captured!.api.movePanel).toHaveBeenCalledWith(0, 1)
+
+		;(captured!.handle as unknown as H).removePanel(h.id)
+		await flush()
+		expect(text(view, 'panels-count')).toBe('0')
+		view.unmount()
+	})
+
+	it('options changes flow to updateOptions', async () => {
+		let captured: { api: ReturnType<typeof makeFakePaneviewApi> } | undefined
+		const view = render(PaneviewHost, {
+			props: {
+				widgets: {},
+				options: { disableDnd: true },
+				onReady: (e: typeof captured) => {
+					captured = e
+				},
+			} as never,
+		})
+		await flush()
+		expect(captured!.api.updateOptions).toHaveBeenCalledWith({ disableDnd: true })
+		vi.mocked(captured!.api.updateOptions).mockClear()
+
+		await view.rerender({ options: { disableDnd: false } } as never)
+		await flush()
+		expect(captured!.api.updateOptions).toHaveBeenCalledWith({ disableDnd: false })
+		view.unmount()
+	})
+
+	it('external layout changes call fromJSON; emitted layout does not loop back', async () => {
+		let captured: { api: ReturnType<typeof makeFakePaneviewApi> } | undefined
+		const view = render(PaneviewHost, {
+			props: {
+				widgets: { a: { component: { name: 'A' } } },
+				onReady: (e: typeof captured) => {
+					captured = e
+				},
+			} as never,
+		})
+		await flush()
+
+		captured!.api.emitLayoutChange()
+		await flush()
+		expect(captured!.api.fromJSON).not.toHaveBeenCalled()
+
+		await view.rerender({ layout: { kind: 'external' } } as never)
+		await flush()
+		expect(captured!.api.fromJSON).toHaveBeenCalledWith({ kind: 'external' })
+		view.unmount()
+	})
+
+	it('createPaneview wires both component factories', async () => {
+		const view = render(PaneviewHost, { props: { widgets: {} } as never })
+		await flush()
+		expect(vi.mocked(createPaneview)).toHaveBeenCalled()
+		const opts = vi.mocked(createPaneview).mock.calls[0][1] as unknown as Record<string, unknown>
+		expect(typeof opts.createComponent).toBe('function')
+		expect(typeof opts.createHeaderComponent).toBe('function')
+		view.unmount()
+	})
+})

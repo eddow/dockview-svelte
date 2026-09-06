@@ -38,6 +38,19 @@ test('params demo round-trips reactive params', async ({ page }) => {
 	await expect(page.getByRole('tabpanel').getByText('12', { exact: false })).toBeVisible()
 })
 
+test('params demo pushes widget params to dockview (two-way)', async ({ page }) => {
+	await page.goto('/demos/params')
+
+	await expect(page.getByRole('tab', { name: /Counter/ })).toBeVisible()
+	// `step++ (param)` mutates `state.params.step` → `api.updateParameters`;
+	// the panel text re-renders from the merged params.
+	await page.getByRole('tabpanel').getByRole('button', { name: 'step++ (param)' }).click()
+	await expect(page.getByRole('tabpanel').getByText('step=3', { exact: false })).toBeVisible()
+	// `rename to count` exercises the per-panel api escape hatch.
+	await page.getByRole('tabpanel').getByRole('button', { name: 'rename to count' }).click()
+	await expect(page.getByRole('tab', { name: /Count/ })).toBeVisible()
+})
+
 test('custom-tab demo shares state between tab and content', async ({ page }) => {
 	await page.goto('/demos/custom-tab')
 
@@ -65,6 +78,19 @@ test('layout demo saves and restores bind:layout', async ({ page }) => {
 	await expect(page.getByRole('tab', { name: 'Panel B' })).toBeVisible()
 })
 
+test('layout demo persists bind:layout across a page reload', async ({ page }) => {
+	await page.goto('/demos/layout')
+
+	await expect(page.getByRole('tab', { name: 'Panel A' })).toBeVisible()
+	// Close Panel A, then reload: the `bind:layout` JSON round-trips through
+	// `fromJSON`, so the closed panel stays closed.
+	await page.getByRole('tab', { name: 'Panel A' }).getByRole('button', { name: /close/i }).click()
+	await expect(page.getByRole('tab', { name: 'Panel A' })).toHaveCount(0)
+	await page.reload()
+	await expect(page.getByRole('tab', { name: 'Panel A' })).toHaveCount(0)
+	await expect(page.getByRole('tab', { name: 'Panel B' })).toBeVisible()
+})
+
 test('themes demo switches themes', async ({ page }) => {
 	await page.goto('/demos/themes')
 
@@ -80,6 +106,15 @@ test('events demo tracks bind:active and event log', async ({ page }) => {
 	await expect(page.getByText('active panel: b-1')).toBeVisible()
 	await expect(page.getByText('added a-1')).toBeVisible()
 	await expect(page.getByText('added b-1')).toBeVisible()
+})
+
+test('events demo updates bind:active on user tab click', async ({ page }) => {
+	await page.goto('/demos/events')
+
+	await expect(page.getByText('active panel: b-1')).toBeVisible()
+	await page.getByRole('tab', { name: 'A' }).click()
+	await expect(page.getByText('active panel: a-1')).toBeVisible()
+	await expect(page.getByText('active panel → a-1').first()).toBeVisible()
 })
 
 test('floating demo opens a floating window via openPanel passthrough', async ({ page }) => {

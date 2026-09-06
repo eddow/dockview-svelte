@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render } from '@testing-library/svelte'
-import { DOCKVIEW_CONTEXT_KEY } from './context.js'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import DvWidget from '../components/DvWidget.svelte'
+import { DOCKVIEW_CONTEXT_KEY } from './context.js'
 
 /** A fake parent-layout context that records registrations/unregistrations. */
 function makeCtx() {
@@ -44,7 +44,6 @@ describe('DvWidget component', () => {
 	})
 
 	it('registers the widget with a function component + title on mount', () => {
-		const { ctx } = makeCtx()
 		const fake = makeCtx()
 		renderWidget({ name: 'chat', title: 'Chat' }, fake)
 
@@ -85,13 +84,34 @@ describe('DvWidget component', () => {
 		expect(fake.registrations.map(([k]) => k)).toEqual(['chat', 'chat2'])
 	})
 
-	it('does not register a tab in a non-dockview layout', () => {
+	it('drops tab/title that are inapplicable to the layout', () => {
 		const fake = makeCtx()
 		fake.ctx.kind = 'splitview'
-		renderWidget({ name: 'a', tab: fakeSnippet() }, fake)
+		renderWidget({ name: 'a', tab: fakeSnippet(), title: 'X' }, fake)
 
-		// The `tab` key is still present in the def (the registry ignores it);
-		// the warning path is covered separately. Assert registration still happens.
+		// `tab` and `title` don't apply to Splitview, so they never reach the registry.
 		expect(fake.registrations).toHaveLength(1)
+		const [, def] = fake.registrations[0]
+		expect(typeof def.component).toBe('function')
+		expect(def.tab).toBeUndefined()
+		expect(def.title).toBeUndefined()
+	})
+
+	it('keeps header only in a paneview layout', () => {
+		const fake = makeCtx()
+		fake.ctx.kind = 'paneview'
+		renderWidget({ name: 'a', header: fakeSnippet() }, fake)
+
+		const [, def] = fake.registrations[0]
+		expect(typeof def.header).toBe('function')
+	})
+
+	it('keeps tab + title in a dockview layout', () => {
+		const fake = makeCtx()
+		renderWidget({ name: 'a', tab: fakeSnippet(), title: 'A' }, fake)
+
+		const [, def] = fake.registrations[0]
+		expect(typeof def.tab).toBe('function')
+		expect(def.title).toBe('A')
 	})
 })

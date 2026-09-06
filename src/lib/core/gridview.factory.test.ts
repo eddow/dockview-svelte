@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DOCKVIEW_CONTEXT_KEY } from './context.js'
+import { expectUpdateParameters, flushEffects } from './effect-helpers.js'
 import { GridviewWidgetRegistry } from './registry.js'
 
 // The fake gridview panel api is hoisted so the `dockview` mock can create it.
@@ -32,10 +33,14 @@ const { makeFakeApi } = vi.hoisted(() => {
 	return { makeFakeApi }
 })
 
-vi.mock('svelte', () => ({
-	mount: vi.fn(() => ({})),
-	unmount: vi.fn(),
-}))
+vi.mock('svelte', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('svelte')>()
+	return {
+		...actual,
+		mount: vi.fn(() => ({})),
+		unmount: vi.fn(),
+	}
+})
 
 // Replace the abstract `GridviewPanel` with a minimal subclassable stub whose
 // constructor exposes `this.api` / `this.element` like the real BasePanelView.
@@ -175,7 +180,12 @@ describe('createGridviewFactory', () => {
 		const registry = new GridviewWidgetRegistry()
 		registry.register('a', { component: { name: 'Cell' } } as never)
 
-		const context = { api: undefined, registerWidget: vi.fn(), unregisterWidget: vi.fn(), kind: 'gridview' as const }
+		const context = {
+			api: undefined,
+			registerWidget: vi.fn(),
+			unregisterWidget: vi.fn(),
+			kind: 'gridview' as const,
+		}
 		const factory = createGridviewFactory(registry, context)
 		const panel = factory.createComponent({ id: 'p1', name: 'a' })
 		panel.init({ params: {} } as never)
@@ -184,5 +194,75 @@ describe('createGridviewFactory', () => {
 			context?: Map<unknown, unknown>
 		}
 		expect(opts.context?.get(DOCKVIEW_CONTEXT_KEY)).toBe(context)
+	})
+
+	it('pushes widget params mutations to api.updateParameters', async () => {
+		const registry = new GridviewWidgetRegistry()
+		registry.register('a', { component: { name: 'Cell' } } as never)
+
+		const factory = createGridviewFactory(registry)
+		const panel = factory.createComponent({ id: 'p1', name: 'a' })
+		panel.init({ params: { a: 1 } } as never)
+		await flushEffects()
+
+		factory.getState('p1')!.params = { a: 2 }
+		await flushEffects()
+		expectUpdateParameters(apiOf(panel), { a: 2 })
+	})
+
+	it('pushes widget activation to api.setActive', async () => {
+		const registry = new GridviewWidgetRegistry()
+		registry.register('a', { component: { name: 'Cell' } } as never)
+
+		const factory = createGridviewFactory(registry)
+		const panel = factory.createComponent({ id: 'p1', name: 'a' })
+		panel.init({ params: {} } as never)
+		await flushEffects()
+
+		factory.getState('p1')!.active = true
+		await flushEffects()
+		expect(apiOf(panel).setActive).toHaveBeenCalled()
+	})
+
+	it('does not re-push dockview-origin params updates (loop-break)', async () => {
+		const registry = new GridviewWidgetRegistry()
+		registry.register('a', { component: { name: 'Cell' } } as never)
+
+		const factory = createGridviewFactory(registry)
+		const panel = factory.createComponent({ id: 'p1', name: 'a' })
+		panel.init({ params: { a: 1 } } as never)
+		await flushEffects()
+		expect(apiOf(panel).updateParameters).not.toHaveBeenCalled()
+
+		panel.update({ params: { a: 2 } } as never)
+		await flushEffects()
+		expect(apiOf(panel).updateParameters).not.toHaveBeenCalled()
+		expect(factory.getState('p1')?.params).toEqual({ a: 2 })
+	})
+
+	it('coalesces rapid dimensions events into one size write', async () => {
+		const registry = new GridviewWidgetRegistry()
+		registry.register('a', { component: { name: 'Cell' } } as never)
+
+		const factory = createGridviewFactory(registry)
+		const panel = factory.createComponent({ id: 'p1', name: 'a' })
+		panel.init({ params: {} } as never)
+		const api = apiOf(panel)
+
+		const queue: FrameRequestCallback[] = []
+		vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+			queue.push(cb)
+			return queue.length
+		})
+		try {
+			api.emitDimensions(10, 10)
+			api.emitDimensions(20, 20)
+			api.emitDimensions(30, 30)
+			expect(factory.getState('p1')?.size).toEqual({ width: 0, height: 0 })
+			for (const cb of queue) cb(0)
+			expect(factory.getState('p1')?.size).toEqual({ width: 30, height: 30 })
+		} finally {
+			vi.unstubAllGlobals()
+		}
 	})
 })

@@ -161,6 +161,9 @@
 			title: opts?.title ?? def.title ?? key,
 			params: opts?.params ?? {}
 		})
+		// `addPanel` fires no observed event for the open path itself — refresh the
+		// bound panels/layout directly so `bind:panels` reflects the new pane.
+		emitLayout()
 
 		const state = factory?.getState(id)
 		// `state` is `PaneviewState<Record<string, unknown>>` at the factory

@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { themeAbyss } from 'dockview'
-	import { onMount } from 'svelte'
-	import { Dockview, type DockviewHandle, DvWidget, type PanelState } from '$lib/index.js'
-	import BasicPanel from '../_widgets/BasicPanel.svelte'
+import { themeAbyss } from 'dockview'
+import { onMount } from 'svelte'
+import { Dockview, type DockviewHandle, DvWidget, type PanelState } from '$lib/index.js'
+import BasicPanel from '../_widgets/BasicPanel.svelte'
 
-	let handle = $state<DockviewHandle | undefined>(undefined)
+let handle = $state<DockviewHandle | undefined>(undefined)
 
-	onMount(() => {
-		handle?.openPanel('basic', { params: { text: 'Hello from a widget' } })
-	})
+onMount(() => {
+	handle?.openPanel('basic', { params: { text: 'Hello from a widget' } })
+})
 </script>
 
 <svelte:head><title>Declarative — dockview-svelte demos</title></svelte:head>

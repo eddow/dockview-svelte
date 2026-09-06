@@ -140,6 +140,10 @@
 			component: key,
 			params: opts?.params ?? {}
 		})
+		// `addPanel` is synchronous but fires no event the component observes for
+		// the open path itself (events cover external mutations) — refresh the
+		// bound views/layout directly so `bind:views` reflects the new panel.
+		emitLayout()
 
 		const state = factory?.getState(id)
 		// `state` is `SplitviewState<Record<string, unknown>>` at the factory

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DOCKVIEW_CONTEXT_KEY } from './context.js'
+import { expectUpdateParameters, flushEffects } from './effect-helpers.js'
 import { PaneviewWidgetRegistry } from './registry.js'
 
 // The fake paneview panel api is hoisted so the part stubs can create it.
@@ -37,10 +38,14 @@ const { makeFakeApi } = vi.hoisted(() => {
 	return { makeFakeApi }
 })
 
-vi.mock('svelte', () => ({
-	mount: vi.fn(() => ({})),
-	unmount: vi.fn(),
-}))
+vi.mock('svelte', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('svelte')>()
+	return {
+		...actual,
+		mount: vi.fn(() => ({})),
+		unmount: vi.fn(),
+	}
+})
 
 const { mount, unmount } = await import('svelte')
 const { createPaneviewFactory } = await import('./paneview.svelte.js')
@@ -196,7 +201,12 @@ describe('createPaneviewFactory', () => {
 			header: { name: 'Header' },
 		} as never)
 
-		const context = { api: undefined, registerWidget: vi.fn(), unregisterWidget: vi.fn(), kind: 'paneview' as const }
+		const context = {
+			api: undefined,
+			registerWidget: vi.fn(),
+			unregisterWidget: vi.fn(),
+			kind: 'paneview' as const,
+		}
 		const factory = createPaneviewFactory(registry, context)
 		const body = factory.createComponent({ id: 'p1', name: 'a' })
 		body.init(fakeParams('p1'))
@@ -207,6 +217,94 @@ describe('createPaneviewFactory', () => {
 		for (const call of vi.mocked(mount).mock.calls) {
 			const opts = call[1] as { context?: Map<unknown, unknown> }
 			expect(opts.context?.get(DOCKVIEW_CONTEXT_KEY)).toBe(context)
+		}
+	})
+
+	it('pushes widget params mutations to api.updateParameters', async () => {
+		const registry = new PaneviewWidgetRegistry()
+		registry.register('a', { component: { name: 'Body' } } as never)
+
+		const factory = createPaneviewFactory(registry)
+		const api = makeFakeApi('p1')
+		const body = factory.createComponent({ id: 'p1', name: 'a' })
+		body.init({ api, params: { a: 1 }, title: 'T' } as never)
+		await flushEffects()
+
+		factory.getState('p1')!.params = { a: 2 }
+		await flushEffects()
+		expectUpdateParameters(api, { a: 2 })
+	})
+
+	it('pushes widget activation to api.setActive', async () => {
+		const registry = new PaneviewWidgetRegistry()
+		registry.register('a', { component: { name: 'Body' } } as never)
+
+		const factory = createPaneviewFactory(registry)
+		const api = makeFakeApi('p1')
+		const body = factory.createComponent({ id: 'p1', name: 'a' })
+		body.init({ api, params: {}, title: 'T' } as never)
+		await flushEffects()
+
+		factory.getState('p1')!.active = true
+		await flushEffects()
+		expect(api.setActive).toHaveBeenCalled()
+	})
+
+	it('pushes widget expand toggles to api.setExpanded', async () => {
+		const registry = new PaneviewWidgetRegistry()
+		registry.register('a', { component: { name: 'Body' } } as never)
+
+		const factory = createPaneviewFactory(registry)
+		const api = makeFakeApi('p1')
+		const body = factory.createComponent({ id: 'p1', name: 'a' })
+		body.init({ api, params: {}, title: 'T' } as never)
+		await flushEffects()
+
+		factory.getState('p1')!.expanded = false
+		await flushEffects()
+		expect(api.setExpanded).toHaveBeenCalledWith(false)
+	})
+
+	it('does not re-push dockview-origin params updates (loop-break)', async () => {
+		const registry = new PaneviewWidgetRegistry()
+		registry.register('a', { component: { name: 'Body' } } as never)
+
+		const factory = createPaneviewFactory(registry)
+		const api = makeFakeApi('p1')
+		const body = factory.createComponent({ id: 'p1', name: 'a' })
+		body.init({ api, params: { a: 1 }, title: 'T' } as never)
+		await flushEffects()
+		expect(api.updateParameters).not.toHaveBeenCalled()
+
+		body.update({ params: { a: 2 } } as never)
+		await flushEffects()
+		expect(api.updateParameters).not.toHaveBeenCalled()
+		expect(factory.getState('p1')?.params).toEqual({ a: 2 })
+	})
+
+	it('coalesces rapid dimensions events into one size write', async () => {
+		const registry = new PaneviewWidgetRegistry()
+		registry.register('a', { component: { name: 'Body' } } as never)
+
+		const factory = createPaneviewFactory(registry)
+		const api = makeFakeApi('p1')
+		const body = factory.createComponent({ id: 'p1', name: 'a' })
+		body.init({ api, params: {}, title: 'T' } as never)
+
+		const queue: FrameRequestCallback[] = []
+		vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+			queue.push(cb)
+			return queue.length
+		})
+		try {
+			api.emitDimensions(10, 10)
+			api.emitDimensions(20, 20)
+			api.emitDimensions(30, 30)
+			expect(factory.getState('p1')?.size).toEqual({ width: 0, height: 0 })
+			for (const cb of queue) cb(0)
+			expect(factory.getState('p1')?.size).toEqual({ width: 30, height: 30 })
+		} finally {
+			vi.unstubAllGlobals()
 		}
 	})
 })
