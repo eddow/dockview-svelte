@@ -17,6 +17,10 @@ export interface DockviewContext {
 	api: DockviewApi | undefined
 	/** Register (or override) a widget type at runtime. */
 	registerWidget: (key: string, def: Parameters<WidgetRegistry['register']>[1]) => void
+	/** Remove a widget type (used when a `<DvWidget>` child is destroyed). */
+	unregisterWidget: (key: string) => void
+	/** The layout this context belongs to (used by `<DvWidget>` to validate snippets). */
+	kind: 'dockview'
 }
 
 /**
@@ -28,6 +32,10 @@ export interface SplitviewContext {
 	api: SplitviewApi | undefined
 	/** Register (or override) a widget type at runtime. */
 	registerWidget: (key: string, def: SplitviewWidgetDefinition) => void
+	/** Remove a widget type (used when a `<DvWidget>` child is destroyed). */
+	unregisterWidget: (key: string) => void
+	/** The layout this context belongs to (used by `<DvWidget>` to validate snippets). */
+	kind: 'splitview'
 }
 
 /**
@@ -39,6 +47,10 @@ export interface GridviewContext {
 	api: GridviewApi | undefined
 	/** Register (or override) a widget type at runtime. */
 	registerWidget: (key: string, def: GridviewWidgetDefinition) => void
+	/** Remove a widget type (used when a `<DvWidget>` child is destroyed). */
+	unregisterWidget: (key: string) => void
+	/** The layout this context belongs to (used by `<DvWidget>` to validate snippets). */
+	kind: 'gridview'
 }
 
 /**
@@ -50,6 +62,10 @@ export interface PaneviewContext {
 	api: PaneviewApi | undefined
 	/** Register (or override) a widget type at runtime. */
 	registerWidget: (key: string, def: PaneviewWidgetDefinition) => void
+	/** Remove a widget type (used when a `<DvWidget>` child is destroyed). */
+	unregisterWidget: (key: string) => void
+	/** The layout this context belongs to (used by `<DvWidget>` to validate snippets). */
+	kind: 'paneview'
 }
 
 export const DOCKVIEW_CONTEXT_KEY = Symbol('dockview-svelte.context')

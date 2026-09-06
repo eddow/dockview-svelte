@@ -175,7 +175,7 @@ describe('createSplitviewFactory', () => {
 		const registry = new SplitviewWidgetRegistry()
 		registry.register('a', { component: { name: 'Pane' } } as never)
 
-		const context = { api: undefined, registerWidget: vi.fn() }
+		const context = { api: undefined, registerWidget: vi.fn(), unregisterWidget: vi.fn(), kind: 'splitview' as const }
 		const factory = createSplitviewFactory(registry, context)
 		const panel = factory.createComponent({ id: 'p1', name: 'a' })
 		panel.init({ params: {} } as never)

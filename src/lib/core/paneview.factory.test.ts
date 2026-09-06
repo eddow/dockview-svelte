@@ -196,7 +196,7 @@ describe('createPaneviewFactory', () => {
 			header: { name: 'Header' },
 		} as never)
 
-		const context = { api: undefined, registerWidget: vi.fn() }
+		const context = { api: undefined, registerWidget: vi.fn(), unregisterWidget: vi.fn(), kind: 'paneview' as const }
 		const factory = createPaneviewFactory(registry, context)
 		const body = factory.createComponent({ id: 'p1', name: 'a' })
 		body.init(fakeParams('p1'))

@@ -47,6 +47,8 @@ describe('factory context forwarding', () => {
 		const context: DockviewContext = {
 			api: undefined,
 			registerWidget: vi.fn(),
+			unregisterWidget: vi.fn(),
+			kind: 'dockview',
 		}
 		const factory = createDockviewFactory(registry, context)
 		const api = fakePanelApi('p1')
@@ -85,9 +87,9 @@ describe('factory context forwarding', () => {
 		const context: DockviewContext = {
 			api: undefined,
 			registerWidget: (key, def) => registry.register(key, def),
+			unregisterWidget: (key) => registry.unregister(key),
+			kind: 'dockview',
 		}
-
-		// Simulate a widget body calling `getContext(DOCKVIEW_CONTEXT_KEY)`.
 		const ctx: DockviewContext | undefined = new Map([[DOCKVIEW_CONTEXT_KEY, context]]).get(
 			DOCKVIEW_CONTEXT_KEY
 		)

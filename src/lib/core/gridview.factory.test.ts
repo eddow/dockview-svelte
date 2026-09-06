@@ -175,7 +175,7 @@ describe('createGridviewFactory', () => {
 		const registry = new GridviewWidgetRegistry()
 		registry.register('a', { component: { name: 'Cell' } } as never)
 
-		const context = { api: undefined, registerWidget: vi.fn() }
+		const context = { api: undefined, registerWidget: vi.fn(), unregisterWidget: vi.fn(), kind: 'gridview' as const }
 		const factory = createGridviewFactory(registry, context)
 		const panel = factory.createComponent({ id: 'p1', name: 'a' })
 		panel.init({ params: {} } as never)

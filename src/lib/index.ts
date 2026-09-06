@@ -2,6 +2,7 @@
 
 export { default as DefaultTab } from './components/DefaultTab.svelte'
 export { default as Dockview } from './components/Dockview.svelte'
+export { default as DvWidget } from './components/DvWidget.svelte'
 export { default as Gridview } from './components/Gridview.svelte'
 export { default as Paneview } from './components/Paneview.svelte'
 export { default as Splitview } from './components/Splitview.svelte'

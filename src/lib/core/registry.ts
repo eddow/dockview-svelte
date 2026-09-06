@@ -11,7 +11,8 @@ import type {
 
 /**
  * Mutable widget registry consulted by the renderer factories and `openPanel`.
- * Seeded from the `widgets` prop, extended at runtime via `registerWidget`.
+ * Seeded from the `widgets` prop, extended at runtime via `registerWidget`
+ * (including `<DvWidget>` declarative children).
  */
 export class WidgetRegistry {
 	private map = new Map<string, WidgetDefinition>()
@@ -19,6 +20,11 @@ export class WidgetRegistry {
 	/** Register or replace a widget definition. */
 	register(key: string, def: WidgetDefinition): void {
 		this.map.set(key, def)
+	}
+
+	/** Remove a widget definition (used when a `<DvWidget>` child is destroyed). */
+	unregister(key: string): void {
+		this.map.delete(key)
 	}
 
 	/** Get a widget definition by key, or `undefined` if unknown. */
@@ -81,6 +87,11 @@ export class SplitviewWidgetRegistry {
 		this.map.set(key, def)
 	}
 
+	/** Remove a widget definition (used when a `<DvWidget>` child is destroyed). */
+	unregister(key: string): void {
+		this.map.delete(key)
+	}
+
 	/** Get a widget definition by key, or `undefined` if unknown. */
 	get(key: string): SplitviewWidgetDefinition | undefined {
 		return this.map.get(key)
@@ -108,6 +119,11 @@ export class GridviewWidgetRegistry {
 		this.map.set(key, def)
 	}
 
+	/** Remove a widget definition (used when a `<DvWidget>` child is destroyed). */
+	unregister(key: string): void {
+		this.map.delete(key)
+	}
+
 	/** Get a widget definition by key, or `undefined` if unknown. */
 	get(key: string): GridviewWidgetDefinition | undefined {
 		return this.map.get(key)
@@ -133,6 +149,11 @@ export class PaneviewWidgetRegistry {
 	/** Register or replace a widget definition. */
 	register(key: string, def: PaneviewWidgetDefinition): void {
 		this.map.set(key, def)
+	}
+
+	/** Remove a widget definition (used when a `<DvWidget>` child is destroyed). */
+	unregister(key: string): void {
+		this.map.delete(key)
 	}
 
 	/** Get a widget definition by key, or `undefined` if unknown. */

@@ -63,6 +63,39 @@ const widgets = defineWidgets({
 
 Use `defineWidgets` (not a bare object) so per-widget param types are preserved for `openPanel`.
 
+Or declare widgets inline with `<DvWidget>` children — same registry, no `widgets` prop:
+
+```svelte
+<Dockview bind:handle>
+	<DvWidget name="chat" title="Chat">
+		{#snippet children(state)}
+			<ChatPanel {state} />
+		{/snippet}
+		{#snippet tab(state)}
+			<ChatTab {state} />
+		{/snippet}
+	</DvWidget>
+	<DvWidget name="help">
+		{#snippet children(state)}
+			<HelpPanel {state} />
+		{/snippet}
+	</DvWidget>
+</Dockview>
+```
+
+Each snippet receives the shared `state` object — the same object a registry
+component gets as its `state` prop. `tab` is the Dockview tab override, `header`
+the Paneview header override; the rest pass through. Works in all four layouts;
+see `/demos/declarative`.
+
+> **Type note:** snippet params default to `never` (Svelte can't infer them
+> per-widget), so annotate them to get typed `state.params`:
+> `{#snippet children(state: PanelState<{ id: number }>)}`.
+>
+> **Layout applicability:** `tab` only affects `<Dockview>`, `header` only
+> `<Paneview>`, and `title` only `<Dockview>`/`<Paneview>`. Passing an
+> inapplicable snippet warns in dev and is ignored.
+
 ## PanelState
 
 One `$state` object per panel, created once and shared by reference between the tab and content mounts:
@@ -293,7 +326,9 @@ ctx.registerWidget('extra', { component: ExtraPanel });
 
 The factory forwards this context to every widget mount, so `getContext` works
 inside panel content and tabs (covered by `core/context.test.ts`).
-This is the hook a future `<DvWidgets>` slot-forwarder will build on (deferred — see `plans/main.md`).
+`<DvWidget>` builds on it: each child registers a snippet-backed wrapper
+component under its `name` (with optional `tab`/`header`/`title`), unregistered
+on destroy.
 
 ## Splitview
 
@@ -388,16 +423,17 @@ The component renders an empty `<div>` on the server and instantiates `DockviewC
 
 | Export | Kind | Notes |
 | ------ | ---- | ----- |
-| `Dockview` | Component | `widgets`, `options`, `bind:layout`, `bind:handle`, `bind:active`, `bind:floating`, `bind:popout`, `watermark`, `left/right/prefixHeaderActions` |
-| `Splitview` | Component | `widgets`, `options`, `bind:layout`, `bind:handle`, `bind:views` — no tabs/headers |
+| `Dockview` | Component | `widgets`, `options`, `bind:layout`, `bind:handle`, `bind:active`, `bind:floating`, `bind:popout`, `watermark`, `left/right/prefixHeaderActions`, `children` (`<DvWidget>`) |
+| `Splitview` | Component | `widgets`, `options`, `bind:layout`, `bind:handle`, `bind:views`, `children` (`<DvWidget>`) — no tabs/headers |
+| `DvWidget` | Component | Declarative widget: `name`, `children(state)`, `tab(state)?`, `header(state)?`, `title?` — registers into the parent layout's registry |
 | `DefaultTab` | Component | Built-in header (title + close) |
 | `defineWidgets` / `WidgetRegistry` | Function / class | Typed registry construction / mutable registry |
 | `defineSplitviewWidgets` / `SplitviewWidgetRegistry` | Function / class | Splitview registry (no tabs/titles) |
 | `defineGridviewWidgets` / `GridviewWidgetRegistry` | Function / class | Gridview registry (no tabs/titles) |
 | `definePaneviewWidgets` / `PaneviewWidgetRegistry` | Function / class | Paneview registry (body + optional header + title) |
-| `Gridview` | Component | `widgets`, `options`, `bind:layout`, `bind:handle`, `bind:panels`, `bind:activePanel` — no tabs/headers |
-| `Paneview` | Component | `widgets`, `options`, `bind:layout`, `bind:handle`, `bind:panels` — collapsible panes with optional custom headers |
-| `DOCKVIEW_CONTEXT_KEY` / `DockviewContext` / `SplitviewContext` / `GridviewContext` / `PaneviewContext` | const / types | `api` + `registerWidget` for descendants |
+| `Gridview` | Component | `widgets`, `options`, `bind:layout`, `bind:handle`, `bind:panels`, `bind:activePanel`, `children` (`<DvWidget>`) — no tabs/headers |
+| `Paneview` | Component | `widgets`, `options`, `bind:layout`, `bind:handle`, `bind:panels`, `children` (`<DvWidget>`) — collapsible panes with optional custom headers |
+| `DOCKVIEW_CONTEXT_KEY` / `DockviewContext` / `SplitviewContext` / `GridviewContext` / `PaneviewContext` | const / types | `api` + `registerWidget` + `unregisterWidget` for descendants |
 | `WatermarkComponent` / `WatermarkProps` | types | `watermark` prop: `{ openPanel }` |
 | `HeaderActionComponent` / `HeaderActionProps` | types | header-action props: `{ containerApi, group, state }` |
 | `PanelState`, `PanelHandle`, `DockviewHandle`, `ActiveState`, `FloatingState`, `PopoutState`, `GroupState` | Types | Shared state, open result, bound handle, active panel/group, floating/popout windows, group header state |
@@ -412,8 +448,8 @@ The component renders an empty `<div>` on the server and instantiates `DockviewC
 npm run dev          # demo gallery (landing + /demos/*)
 npm run check        # svelte-check
 npm run biome        # lint + format check
-npm run test:unit    # vitest (registry, utils, factory, context, splitview, gridview, paneview)
-npm run test:e2e     # playwright (14 tests over the demo gallery)
+npm run test:unit    # vitest (registry, utils, factory, context, splitview, gridview, paneview, dvwidget)
+npm run test:e2e     # playwright (15 tests over the demo gallery)
 npm run prepack      # svelte-package + publint
 ```
 
@@ -435,6 +471,7 @@ highlighted source (Shiki, display-only):
 | `/demos/splitview` | resizable split panes (no tabs/headers) |
 | `/demos/gridview` | 2-D grid splits (no tabs/headers) |
 | `/demos/paneview` | collapsible panes with optional custom headers |
+| `/demos/declarative` | `<DvWidget>` children instead of the `widgets` prop |
 
 ## License
 

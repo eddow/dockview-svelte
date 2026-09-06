@@ -15,6 +15,7 @@ test('landing page links all demos', async ({ page }) => {
 		'Splitview',
 		'Gridview',
 		'Paneview',
+		'Declarative widgets',
 	]) {
 		await expect(page.getByRole('link', { name })).toBeVisible()
 	}
@@ -177,4 +178,11 @@ test('paneview demo opens panes and collapses', async ({ page }) => {
 	await expect(page.getByText('panes: 3')).toBeVisible()
 	// Custom header renders the pane title with a collapse toggle.
 	await expect(demo.getByText('Pane A', { exact: true }).first()).toBeVisible()
+})
+
+test('declarative demo opens a DvWidget panel', async ({ page }) => {
+	await page.goto('/demos/declarative')
+
+	await expect(page.getByRole('tab', { name: /Basic/ })).toBeVisible()
+	await expect(page.getByRole('tabpanel').getByText('Hello from a widget')).toBeVisible()
 })
