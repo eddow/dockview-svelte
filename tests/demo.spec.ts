@@ -1,8 +1,13 @@
 import { expect, test } from '@playwright/test'
 
-test('landing page links all demos', async ({ page }) => {
+test('landing page redirects to a complete demo', async ({ page }) => {
 	await page.goto('/')
 
+	// `/` redirects to `/demos/basic` — a complete demo, not an index page.
+	await expect(page).toHaveURL(/\/demos\/basic$/)
+	await expect(page.getByRole('tab', { name: /Basic/ })).toBeVisible()
+	await expect(page.getByRole('tabpanel').getByText('Hello from a widget')).toBeVisible()
+	// The nav still links every demo.
 	for (const name of [
 		'open a widget',
 		'Reactive params',
@@ -26,9 +31,10 @@ test('basic demo opens a widget with highlighted source', async ({ page }) => {
 
 	await expect(page.getByRole('tab', { name: /Basic/ })).toBeVisible()
 	await expect(page.getByRole('tabpanel').getByText('Hello from a widget')).toBeVisible()
-	// Code starts visible at 50/50; the toggle collapses it.
-	const toggle = page.getByRole('button', { name: 'Hide code' })
-	await expect(toggle).toBeVisible()
+	// Code starts hidden (demo full-width); "Show code" reveals it at 50/50.
+	await expect(page.getByRole('button', { name: 'Show code' })).toBeVisible()
+	await page.getByRole('button', { name: 'Show code' }).click()
+	await expect(page.getByRole('button', { name: 'Hide code' })).toBeVisible()
 	// Display-only Shiki block shows the demo source.
 	await expect(page.getByText('openPanel', { exact: false }).first()).toBeVisible()
 	// Both outer panes render side by side with non-zero width (~50/50).
@@ -43,11 +49,9 @@ test('basic demo opens a widget with highlighted source', async ({ page }) => {
 	const ratio = widths[0] / (widths[0] + widths[1])
 	expect(ratio).toBeGreaterThan(0.35)
 	expect(ratio).toBeLessThan(0.65)
-	// Hiding collapses the pane; showing restores it.
+	// Hiding collapses the pane again.
 	await page.getByRole('button', { name: 'Hide code' }).click()
 	await expect(page.getByRole('button', { name: 'Show code' })).toBeVisible()
-	await page.getByRole('button', { name: 'Show code' }).click()
-	await expect(page.getByRole('button', { name: 'Hide code' })).toBeVisible()
 })
 
 test('params demo round-trips reactive params', async ({ page }) => {

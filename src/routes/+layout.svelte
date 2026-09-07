@@ -60,11 +60,13 @@ let widgetCodes = $derived(
 		.filter((w) => w.code)
 )
 
-// Demo/code split: demo on the left, source on the right, 50/50 by
-// default. The layout persists across demo navigation, so the panes are
-// opened once and the code visibility survives route changes.
+// Demo/code split: demo on the left, source on the right. The code pane
+// starts hidden but pre-sized to 50% — `setVisible` caches the size and
+// restores it on re-show, so "Show code" lands on a 50/50 split. The layout
+// persists across demo navigation, so the panes are opened once and the
+// code visibility survives route changes.
 let splitHandle = $state<SplitviewHandle | undefined>(undefined)
-let codeVisible = $state(true)
+let codeVisible = $state(false)
 let opened = false
 
 function toggleCode(): void {
@@ -107,12 +109,15 @@ onMount(() => {
 			return
 		}
 		// No explicit `size`: both panes default to `Sizing.Distribute`,
-		// so the demo and the source start at 50/50. `proportionalLayout`
-		// keeps the ratio on window resizes; hiding via the toggle caches
-		// the size and restores it on re-show.
+		// so the code pane is pre-sized to 50% even while hidden —
+		// `setVisible(false)` caches that size and `setVisible(true)`
+		// restores it, so "Show code" lands on a 50/50 split.
+		// `proportionalLayout` keeps the ratio on window resizes.
 		splitHandle!.openPanel('demo', { id: 'demo', minimumSize: 200 })
 		splitHandle!.openPanel('code', { id: 'code', minimumSize: 280 })
-		codeVisible = true
+		// Hidden by default, but with its 50% width already configured.
+		splitHandle!.setVisible('code', false)
+		codeVisible = false
 		syncCodeVisible()
 	}
 	requestAnimationFrame(seed)
@@ -163,7 +168,7 @@ onMount(() => {
 								{/each}
 							</section>
 						{:else}
-							<p>Pick a demo to see its source.</p>
+							<p>Loading source…</p>
 						{/if}
 					</div>
 				{/snippet}
