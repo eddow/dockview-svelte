@@ -193,13 +193,11 @@ describe('Gridview component logic', () => {
 
 		;(captured!.handle as unknown as H).setVisible(h.id, false)
 		expect(
-			(captured!.api.getPanel(h.id) as unknown as { api: { setVisible: unknown } }).api
-				.setVisible
+			(captured!.api.getPanel(h.id) as unknown as { api: { setVisible: unknown } }).api.setVisible
 		).toHaveBeenCalledWith(false)
 		;(captured!.handle as unknown as H).setActive(h.id)
 		expect(
-			(captured!.api.getPanel(h.id) as unknown as { api: { setActive: unknown } }).api
-				.setActive
+			(captured!.api.getPanel(h.id) as unknown as { api: { setActive: unknown } }).api.setActive
 		).toHaveBeenCalledWith()
 		;(captured!.handle as unknown as H).movePanel(h.id, {
 			direction: 'right',

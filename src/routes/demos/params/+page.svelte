@@ -1,12 +1,12 @@
 <script lang="ts">
 import { themeAbyss } from 'dockview'
 import { onMount } from 'svelte'
-import { Dockview, type DockviewHandle, defineWidgets } from '$lib/index.js'
+import { Dockview, type DockviewHandle } from '$lib/index.js'
 import CounterPanel from '../_widgets/CounterPanel.svelte'
 
-const widgets = defineWidgets({
+const widgets = {
 	counter: { component: CounterPanel, title: 'Counter' },
-})
+}
 
 let handle = $state<DockviewHandle<typeof widgets> | undefined>(undefined)
 // Passed by reference as openPanel `params`, so this object IS `state.params`

@@ -192,16 +192,19 @@ test('splitview demo opens panes and toggles orientation', async ({ page }) => {
 	await expect(demo.getByText('Left pane', { exact: true })).toBeVisible()
 	await expect(demo.getByText('Right pane', { exact: true })).toBeVisible()
 	await expect(page.getByText('views: 2')).toBeVisible()
-	const widths = await demo.locator(':scope .dv-view-container > .dv-view').evaluateAll((els) =>
-		els.map((el) => el.getBoundingClientRect().width)
-	)
+	const widths = await demo
+		.locator(':scope .dv-view-container > .dv-view')
+		.evaluateAll((els) => els.map((el) => el.getBoundingClientRect().width))
 	expect(widths.length).toBe(2)
 	for (const w of widths) expect(w).toBeGreaterThan(100)
 	// The last opened pane is active via `bind:activeView`.
 	await expect(page.getByText('active: b-1')).toBeVisible()
 	// Activating the other pane follows through the per-panel active event
 	// (the library derives `bind:activeView` from it).
-	await demo.locator('.split', { hasText: 'Left pane' }).getByRole('button', { name: 'activate' }).click()
+	await demo
+		.locator('.split', { hasText: 'Left pane' })
+		.getByRole('button', { name: 'activate' })
+		.click()
 	await expect(
 		demo.locator('.split', { hasText: 'Left pane' }).getByText('active: true', { exact: false })
 	).toBeVisible()
@@ -229,7 +232,10 @@ test('gridview demo opens cells and toggles orientation', async ({ page }) => {
 	await expect(page.getByText('active: b-2')).toBeVisible()
 	// Activating another cell follows through the per-panel active event
 	// (the library derives `bind:activePanel` from it).
-	await demo.locator('.grid', { hasText: 'Top-left cell' }).getByRole('button', { name: 'activate' }).click()
+	await demo
+		.locator('.grid', { hasText: 'Top-left cell' })
+		.getByRole('button', { name: 'activate' })
+		.click()
 	await expect(
 		demo.locator('.grid', { hasText: 'Top-left cell' }).getByText('active: true', { exact: false })
 	).toBeVisible()

@@ -46,33 +46,39 @@ export class WidgetRegistry {
 }
 
 /**
- * Preserves literal keys and per-widget param types via a `const` type param.
- * A bare `satisfies Widgets` would widen the values to `WidgetDefinition<any>`,
- * losing param inference — use this instead.
+ * Identity helper that preserves literal keys and per-widget param types via
+ * a `const` type param. No longer needed for inference — the view components
+ * declare `const W` generics, so a plain object literal passed to `widgets`
+ * infers the same types. Kept as a deprecated alias for existing code.
+ *
+ * @deprecated Pass a plain object to `widgets` instead — inference is automatic.
  */
 export function defineWidgets<const W extends Widgets>(w: W): W {
 	return w
 }
 
 /**
- * Same as {@link defineWidgets} for splitviews — preserves literal keys and
- * per-widget param types.
+ * Deprecated alias — pass a plain object to `Splitview`'s `widgets` instead.
+ *
+ * @deprecated Pass a plain object to `widgets` instead — inference is automatic.
  */
 export function defineSplitviewWidgets<const W extends SplitviewWidgets>(w: W): W {
 	return w
 }
 
 /**
- * Same as {@link defineWidgets} for gridviews — preserves literal keys and
- * per-widget param types.
+ * Deprecated alias — pass a plain object to `Gridview`'s `widgets` instead.
+ *
+ * @deprecated Pass a plain object to `widgets` instead — inference is automatic.
  */
 export function defineGridviewWidgets<const W extends GridviewWidgets>(w: W): W {
 	return w
 }
 
 /**
- * Same as {@link defineWidgets} for paneviews — preserves literal keys and
- * per-widget param types.
+ * Deprecated alias — pass a plain object to `Paneview`'s `widgets` instead.
+ *
+ * @deprecated Pass a plain object to `widgets` instead — inference is automatic.
  */
 export function definePaneviewWidgets<const W extends PaneviewWidgets>(w: W): W {
 	return w

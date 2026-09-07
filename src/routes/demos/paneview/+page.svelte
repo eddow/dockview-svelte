@@ -1,14 +1,14 @@
 <script lang="ts">
 import type { IPaneviewPanel } from 'dockview'
 import { onMount } from 'svelte'
-import { definePaneviewWidgets, Paneview, type PaneviewHandle } from '$lib/index.js'
+import { Paneview, type PaneviewHandle } from '$lib/index.js'
 import PaneBody from '../_widgets/PaneBody.svelte'
 import PaneHeader from '../_widgets/PaneHeader.svelte'
 
-const widgets = definePaneviewWidgets({
+const widgets = {
 	a: { component: PaneBody, header: PaneHeader, title: 'Pane A' },
 	b: { component: PaneBody, title: 'Pane B' },
-})
+}
 
 let handle = $state<PaneviewHandle<typeof widgets> | undefined>(undefined)
 let panels = $state<IPaneviewPanel[]>([])
@@ -23,8 +23,8 @@ onMount(() => {
 
 <h1>Paneview</h1>
 <p>
-	Collapsible VS Code-style sidebars with the same Svelte idiom as <code>Dockview</code> —
-	widgets, typed <code>openPanel</code>, reactive <code>state</code>,
+	Collapsible VS Code-style sidebars with the same Svelte idiom as <code>Dockview</code> — widgets,
+	typed <code>openPanel</code>, reactive <code>state</code>,
 	<code>bind:layout</code>. Each pane mounts a body component plus an optional custom header
 	(sharing one <code>state</code>); without a header dockview's default title header is used.
 </p>

@@ -1,12 +1,12 @@
 <script lang="ts">
 import { themeAbyss } from 'dockview'
-import { Dockview, type DockviewHandle, defineWidgets } from '$lib/index.js'
+import { Dockview, type DockviewHandle } from '$lib/index.js'
 import BasicPanel from '../_widgets/BasicPanel.svelte'
 import EmptyWatermark from '../_widgets/EmptyWatermark.svelte'
 
-const widgets = defineWidgets({
+const widgets = {
 	a: { component: BasicPanel, title: 'A' },
-})
+}
 
 let handle = $state<DockviewHandle<typeof widgets> | undefined>(undefined)
 </script>

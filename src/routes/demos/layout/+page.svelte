@@ -1,12 +1,12 @@
 <script lang="ts">
 import { Orientation, type SerializedDockview, themeAbyss } from 'dockview'
-import { Dockview, type DockviewHandle, defineWidgets } from '$lib/index.js'
+import { Dockview, type DockviewHandle } from '$lib/index.js'
 import BasicPanel from '../_widgets/BasicPanel.svelte'
 
-const widgets = defineWidgets({
+const widgets = {
 	a: { component: BasicPanel, title: 'A' },
 	b: { component: BasicPanel, title: 'B' },
-})
+}
 
 /** Hard-coded initial layout: two panels side by side. */
 const stored =

@@ -20,16 +20,16 @@ npm install dockview-svelte dockview svelte
 
 ```svelte
 <script lang="ts">
-	import { Dockview, defineWidgets, type DockviewHandle } from 'dockview-svelte';
+	import { Dockview, type DockviewHandle } from 'dockview-svelte';
 	import 'dockview/dist/styles/dockview.css';
 	import { themeAbyss, type SerializedDockview } from 'dockview';
 	import ChatPanel from './ChatPanel.svelte';
 	import ChatTab from './ChatTab.svelte';
 
-	const widgets = defineWidgets({
+	const widgets = {
 		chat: { component: ChatPanel, tab: ChatTab, title: 'Chat' },
 		help: { component: HelpPanel }, // default tab, widget-key title fallback
-	});
+	};
 
 	let handle = $state<DockviewHandle<typeof widgets> | undefined>(undefined);
 	let layout = $state<SerializedDockview | undefined>(undefined);
@@ -49,10 +49,10 @@ Import the stylesheet once from `dockview` — the library does not force it.
 A **widget** is a Svelte component definition; a **panel** is an instantiated widget (`widget + id + reactive params`).
 
 ```ts
-const widgets = defineWidgets({
+const widgets = {
 	chat: { component: ChatPanel, tab: ChatTab, title: 'Chat' },
 	help: { component: HelpPanel },
-});
+};
 ```
 
 | Field       | Required | Notes                                                        |
@@ -61,7 +61,9 @@ const widgets = defineWidgets({
 | `tab`       | no       | Header override. Falls back to built-in `DefaultTab`         |
 | `title`     | no       | Default title. Falls back to the widget key                  |
 
-Use `defineWidgets` (not a bare object) so per-widget param types are preserved for `openPanel`.
+Per-widget param types are inferred automatically from the `widgets` object
+(the view components declare `const W` generics), so `openPanel` stays typed
+with a plain object literal.
 
 Or declare widgets inline with `<DvWidget>` children — same registry, no `widgets` prop:
 

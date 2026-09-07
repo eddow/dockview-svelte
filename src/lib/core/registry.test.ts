@@ -33,7 +33,7 @@ describe('WidgetRegistry', () => {
 	})
 })
 
-describe('defineWidgets', () => {
+describe('defineWidgets (deprecated alias)', () => {
 	it('returns the same object preserving keys', () => {
 		const widgets = defineWidgets({ a: widgetA, b: widgetB })
 		expect(widgets.a).toBe(widgetA)

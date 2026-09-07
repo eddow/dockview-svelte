@@ -1,14 +1,14 @@
 <script lang="ts">
 import { themeAbyss } from 'dockview'
 import { onMount } from 'svelte'
-import { Dockview, type DockviewHandle, defineWidgets } from '$lib/index.js'
+import { Dockview, type DockviewHandle } from '$lib/index.js'
 import BadgeTab from '../_widgets/BadgeTab.svelte'
 import InboxPanel from '../_widgets/InboxPanel.svelte'
 
-const widgets = defineWidgets({
+const widgets = {
 	inbox: { component: InboxPanel, tab: BadgeTab, title: 'Inbox' },
 	plain: { component: InboxPanel, title: 'Plain' },
-})
+}
 
 let handle = $state<DockviewHandle<typeof widgets> | undefined>(undefined)
 

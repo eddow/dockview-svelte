@@ -24,3 +24,6 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 sandbox/*
 test-results
+
+# Local publish tarballs (`npm pack`, tests/install consumer flow)
+*.tgz

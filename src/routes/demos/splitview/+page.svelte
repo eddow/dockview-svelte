@@ -1,39 +1,39 @@
 <script lang="ts">
-	import { type ISplitviewPanel, Orientation } from 'dockview'
-	import { defineSplitviewWidgets, Splitview, type SplitviewHandle } from '$lib/index.js'
-	import SplitPanel from '../_widgets/SplitPanel.svelte'
+import { type ISplitviewPanel, Orientation } from 'dockview'
+import { Splitview, type SplitviewHandle } from '$lib/index.js'
+import SplitPanel from '../_widgets/SplitPanel.svelte'
 
-	const widgets = defineSplitviewWidgets({
-		a: { component: SplitPanel },
-		b: { component: SplitPanel }
-	})
+const widgets = {
+	a: { component: SplitPanel },
+	b: { component: SplitPanel },
+}
 
-	let handle = $state<SplitviewHandle<typeof widgets> | undefined>(undefined)
-	let orientation = $state<Orientation>(Orientation.HORIZONTAL)
-	let views = $state<ISplitviewPanel[]>([])
-	let activeView = $state<ISplitviewPanel | undefined>(undefined)
+let handle = $state<SplitviewHandle<typeof widgets> | undefined>(undefined)
+let orientation = $state<Orientation>(Orientation.HORIZONTAL)
+let views = $state<ISplitviewPanel[]>([])
+let activeView = $state<ISplitviewPanel | undefined>(undefined)
 
-	// Seed one frame past `onReady`: dockview's `Resizable` only learns the
-	// container size on its first `ResizeObserver` pass (dispatched through
-	// `requestAnimationFrame`). Panels opened while the splitview still measures
-	// 0px keep a 0px first pane — `Sizing.Distribute` divides the then-current
-	// size and `proportionalLayout` locks in the [0, 1] split forever.
-	// Seed once the splitview has a real size: dockview's `Resizable` learns
-	// the container size on its first `ResizeObserver` pass, and the demo pane
-	// itself is still settling (outer demo/code split) when `onReady` fires.
-	// Panels opened at 0px keep a 0px first pane — `Sizing.Distribute` divides
-	// the then-current size and `proportionalLayout` locks in the split.
-	function seed() {
-		const wait = () => {
-			if ((handle?.api.width ?? 0) > 0) {
-				handle?.openPanel('a', { params: { text: 'Left pane' } })
-				handle?.openPanel('b', { params: { text: 'Right pane' } })
-			} else {
-				requestAnimationFrame(wait)
-			}
+// Seed one frame past `onReady`: dockview's `Resizable` only learns the
+// container size on its first `ResizeObserver` pass (dispatched through
+// `requestAnimationFrame`). Panels opened while the splitview still measures
+// 0px keep a 0px first pane — `Sizing.Distribute` divides the then-current
+// size and `proportionalLayout` locks in the [0, 1] split forever.
+// Seed once the splitview has a real size: dockview's `Resizable` learns
+// the container size on its first `ResizeObserver` pass, and the demo pane
+// itself is still settling (outer demo/code split) when `onReady` fires.
+// Panels opened at 0px keep a 0px first pane — `Sizing.Distribute` divides
+// the then-current size and `proportionalLayout` locks in the split.
+function seed() {
+	const wait = () => {
+		if ((handle?.api.width ?? 0) > 0) {
+			handle?.openPanel('a', { params: { text: 'Left pane' } })
+			handle?.openPanel('b', { params: { text: 'Right pane' } })
+		} else {
+			requestAnimationFrame(wait)
 		}
-		requestAnimationFrame(wait)
 	}
+	requestAnimationFrame(wait)
+}
 </script>
 
 <svelte:head><title>Splitview — dockview-svelte demos</title></svelte:head>

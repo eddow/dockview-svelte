@@ -1,111 +1,111 @@
 <script lang="ts">
-	import 'dockview/dist/styles/dockview.css'
-	import '../app.css'
-	import { Orientation } from 'dockview'
-	import type { Snippet } from 'svelte'
-	import { onMount } from 'svelte'
-	import { page } from '$app/state'
-	import { DvWidget, Splitview, type SplitviewHandle } from '$lib/index.js'
-	import Code from './demos/Code.svelte'
+import 'dockview/dist/styles/dockview.css'
+import '../app.css'
+import { Orientation } from 'dockview'
+import type { Snippet } from 'svelte'
+import { onMount } from 'svelte'
+import { page } from '$app/state'
+import { DvWidget, Splitview, type SplitviewHandle } from '$lib/index.js'
+import Code from './demos/Code.svelte'
 
-	let { children: pageChildren }: { children: Snippet } = $props()
+let { children: pageChildren }: { children: Snippet } = $props()
 
-	const demos = [
-		{ href: '/demos/basic', label: 'Basic: open a widget' },
-		{ href: '/demos/params', label: 'Reactive params (two-way)' },
-		{ href: '/demos/custom-tab', label: 'Custom tab + shared state' },
-		{ href: '/demos/layout', label: 'Save / restore bind:layout' },
-		{ href: '/demos/themes', label: 'Themes' },
-		{ href: '/demos/events', label: 'bind:active + events' },
-		{ href: '/demos/empty', label: 'Empty state (watermark)' },
-		{ href: '/demos/floating', label: 'Floating groups' },
-		{ href: '/demos/splitview', label: 'Splitview' },
-		{ href: '/demos/gridview', label: 'Gridview' },
-		{ href: '/demos/paneview', label: 'Paneview' },
-		{ href: '/demos/declarative', label: 'Declarative widgets' }
-	] as const
+const demos = [
+	{ href: '/demos/basic', label: 'Basic: open a widget' },
+	{ href: '/demos/params', label: 'Reactive params (two-way)' },
+	{ href: '/demos/custom-tab', label: 'Custom tab + shared state' },
+	{ href: '/demos/layout', label: 'Save / restore bind:layout' },
+	{ href: '/demos/themes', label: 'Themes' },
+	{ href: '/demos/events', label: 'bind:active + events' },
+	{ href: '/demos/empty', label: 'Empty state (watermark)' },
+	{ href: '/demos/floating', label: 'Floating groups' },
+	{ href: '/demos/splitview', label: 'Splitview' },
+	{ href: '/demos/gridview', label: 'Gridview' },
+	{ href: '/demos/paneview', label: 'Paneview' },
+	{ href: '/demos/declarative', label: 'Declarative widgets' },
+] as const
 
-	const pageSources = import.meta.glob('./demos/*/+page.svelte', {
-		query: '?raw',
-		import: 'default',
-		eager: true
-	}) as Record<string, string>
+const pageSources = import.meta.glob('./demos/*/+page.svelte', {
+	query: '?raw',
+	import: 'default',
+	eager: true,
+}) as Record<string, string>
 
-	const widgetSources = import.meta.glob('./demos/_widgets/*.svelte', {
-		query: '?raw',
-		import: 'default',
-		eager: true
-	}) as Record<string, string>
+const widgetSources = import.meta.glob('./demos/_widgets/*.svelte', {
+	query: '?raw',
+	import: 'default',
+	eager: true,
+}) as Record<string, string>
 
-	const demoWidgets: Record<string, string[]> = {
-		'/demos/basic': ['BasicPanel.svelte'],
-		'/demos/params': ['CounterPanel.svelte'],
-		'/demos/custom-tab': ['InboxPanel.svelte', 'BadgeTab.svelte'],
-		'/demos/layout': ['BasicPanel.svelte'],
-		'/demos/themes': ['BasicPanel.svelte'],
-		'/demos/events': ['BasicPanel.svelte'],
-		'/demos/empty': ['BasicPanel.svelte', 'EmptyWatermark.svelte'],
-		'/demos/floating': ['BasicPanel.svelte', 'GroupHeaderActions.svelte', 'PanelHeaderTab.svelte'],
-		'/demos/splitview': ['SplitPanel.svelte'],
-		'/demos/gridview': ['GridCell.svelte'],
-		'/demos/paneview': ['PaneBody.svelte', 'PaneHeader.svelte'],
-		'/demos/declarative': []
-	}
+const demoWidgets: Record<string, string[]> = {
+	'/demos/basic': ['BasicPanel.svelte'],
+	'/demos/params': ['CounterPanel.svelte'],
+	'/demos/custom-tab': ['InboxPanel.svelte', 'BadgeTab.svelte'],
+	'/demos/layout': ['BasicPanel.svelte'],
+	'/demos/themes': ['BasicPanel.svelte'],
+	'/demos/events': ['BasicPanel.svelte'],
+	'/demos/empty': ['BasicPanel.svelte', 'EmptyWatermark.svelte'],
+	'/demos/floating': ['BasicPanel.svelte', 'GroupHeaderActions.svelte', 'PanelHeaderTab.svelte'],
+	'/demos/splitview': ['SplitPanel.svelte'],
+	'/demos/gridview': ['GridCell.svelte'],
+	'/demos/paneview': ['PaneBody.svelte', 'PaneHeader.svelte'],
+	'/demos/declarative': [],
+}
 
-	let pathname = $derived(page.url.pathname)
-	let pageSource = $derived(pageSources[`.${pathname}/+page.svelte`])
-	let widgetCodes = $derived(
-		(demoWidgets[pathname] ?? [])
-			.map((file) => ({ file, code: widgetSources[`./demos/_widgets/${file}`] }))
-			.filter((w) => w.code)
-	)
+let pathname = $derived(page.url.pathname)
+let pageSource = $derived(pageSources[`.${pathname}/+page.svelte`])
+let widgetCodes = $derived(
+	(demoWidgets[pathname] ?? [])
+		.map((file) => ({ file, code: widgetSources[`./demos/_widgets/${file}`] }))
+		.filter((w) => w.code)
+)
 
-	// Demo/code split: demo on the left, source on the right (collapsed by
-	// default). The layout persists across demo navigation, so the panes are
-	// opened once and the code visibility survives route changes.
-	let splitHandle = $state<SplitviewHandle | undefined>(undefined)
-	let codeVisible = $state(false)
-	let opened = false
+// Demo/code split: demo on the left, source on the right (collapsed by
+// default). The layout persists across demo navigation, so the panes are
+// opened once and the code visibility survives route changes.
+let splitHandle = $state<SplitviewHandle | undefined>(undefined)
+let codeVisible = $state(false)
+let opened = false
 
-	function toggleCode(): void {
-		if (!splitHandle) return
-		// Don't flip `codeVisible` here — `api.setVisible` fires
-		// `onDidVisibilityChange` synchronously, and the `$effect` below syncs
-		// `codeVisible` from it. A manual flip would read the already-updated
-		// value and flip it straight back.
-		splitHandle.setVisible('code', !codeVisible)
-	}
+function toggleCode(): void {
+	if (!splitHandle) return
+	// Don't flip `codeVisible` here — `api.setVisible` fires
+	// `onDidVisibilityChange` synchronously, and the `$effect` below syncs
+	// `codeVisible` from it. A manual flip would read the already-updated
+	// value and flip it straight back.
+	splitHandle.setVisible('code', !codeVisible)
+}
 
-	// Keep the toggle in sync when the code pane is hidden/shown through any
-	// other path (sash snap, api escape hatch). Subscribed once the panels exist
-	// — a `$effect` on `splitHandle` alone would run before `onMount` opens the
-	// panels (`getPanel` → undefined) and never re-run, missing every event.
-	let visibilityDisposable: { dispose(): void } | undefined
+// Keep the toggle in sync when the code pane is hidden/shown through any
+// other path (sash snap, api escape hatch). Subscribed once the panels exist
+// — a `$effect` on `splitHandle` alone would run before `onMount` opens the
+// panels (`getPanel` → undefined) and never re-run, missing every event.
+let visibilityDisposable: { dispose(): void } | undefined
 
-	function syncCodeVisible(): void {
-		visibilityDisposable?.dispose()
-		const code = splitHandle?.api.getPanel('code')
-		if (!code) return
-		visibilityDisposable = code.api.onDidVisibilityChange((event) => {
-			codeVisible = event.isVisible
-		})
-	}
-
-	onMount(() => {
-		// `splitHandle` is bound by the child `<Splitview>` (child `onMount`
-		// runs before the parent's), but guard anyway and open exactly once.
-		if (opened || !splitHandle) return
-		opened = true
-		splitHandle.openPanel('demo', { id: 'demo', minimumSize: 200 })
-		splitHandle.openPanel('code', { id: 'code', minimumSize: 280, size: 480 })
-		// Begin collapsed: the demo gets the full width until the user asks
-		// for the source via the toolbar toggle. `setVisible` routes through
-		// `onWillVisibilityChange` → `accessor.setVisible`, so the sash
-		// collapses the pane to zero footprint (not just `display:none`).
-		splitHandle.setVisible('code', false)
-		codeVisible = false
-		syncCodeVisible()
+function syncCodeVisible(): void {
+	visibilityDisposable?.dispose()
+	const code = splitHandle?.api.getPanel('code')
+	if (!code) return
+	visibilityDisposable = code.api.onDidVisibilityChange((event) => {
+		codeVisible = event.isVisible
 	})
+}
+
+onMount(() => {
+	// `splitHandle` is bound by the child `<Splitview>` (child `onMount`
+	// runs before the parent's), but guard anyway and open exactly once.
+	if (opened || !splitHandle) return
+	opened = true
+	splitHandle.openPanel('demo', { id: 'demo', minimumSize: 200 })
+	splitHandle.openPanel('code', { id: 'code', minimumSize: 280, size: 480 })
+	// Begin collapsed: the demo gets the full width until the user asks
+	// for the source via the toolbar toggle. `setVisible` routes through
+	// `onWillVisibilityChange` → `accessor.setVisible`, so the sash
+	// collapses the pane to zero footprint (not just `display:none`).
+	splitHandle.setVisible('code', false)
+	codeVisible = false
+	syncCodeVisible()
+})
 </script>
 
 <div class="shell">

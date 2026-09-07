@@ -5,7 +5,7 @@
 - **One registry**, not two parallel maps. A panel *type* is a single `WidgetDefinition` entry that optionally carries its content component, its header (`tab`) override, and its default title.
 - **Headers are associated with panels per-widget** (`widgets[key].tab`). There is no "tab map" — the tab lives on the same definition as the content.
 - **Titles resolve through a three-tier chain** (explicit → per-widget → widget key) evaluated **once at open time**, after which dockview owns the runtime title.
-- **`bind:handle`** exposes a `DockviewHandle` that bundles the raw `DockviewApi`, a typed `openPanel`, and `registerWidget`.
+- **`bind:handle`** exposes a `DockviewHandle` that bundles the raw `DockviewApi`, a typed `openPanel`, `registerWidget`, and `float`/`popout`/`dockAll`.
 - **Completely open**: raw `handle.api` is the escape hatch; `openPanel` passes through every `AddPanelOptions` field it doesn't own.
 
 ## 2. The registry
@@ -50,23 +50,27 @@ export interface WidgetDefinition<C extends WidgetComponent<any> = WidgetCompone
 
 export type Widgets = Record<string, WidgetDefinition>;
 
-/** Preserves literal keys and per-widget param types via a `const` type param. */
+/**
+ * Deprecated identity helper — no longer needed for inference. The view
+ * components declare `const W` generics, so a plain object literal passed to
+ * `widgets` infers literal keys and per-widget param types automatically.
+ * Kept as an alias for existing code.
+ */
 export function defineWidgets<const W extends Widgets>(w: W): W {
   return w;
 }
 ```
 
-Usage (a bare `satisfies Widgets` would widen param types to `any`; use
-`defineWidgets` to keep full inference):
+Usage (inference is automatic — pass a plain object):
 
 ```ts
 import ChatWidget from './ChatWidget.svelte';
 import ChatTab from './ChatTab.svelte';
 
-const widgets = defineWidgets({
+const widgets = {
   chat: { component: ChatWidget, tab: ChatTab, title: 'Chat' },
   help: { component: HelpWidget }, // no tab, no title → built-in tab + widget-key title
-});
+};
 ```
 
 ## 3. PanelState & PanelHandle
@@ -260,6 +264,12 @@ export interface DockviewHandle<W extends Widgets = Widgets> {
   openPanel: OpenPanelFn<W>;
   /** Register (or override) a widget type at runtime, without touching `widgets`. */
   registerWidget: (key: string, def: WidgetDefinition) => void;
+  /** Float a panel or group (`IDockviewPanel` | `DockviewGroupPanel` | panel id) into its own window. */
+  float: (target: IDockviewPanel | DockviewGroupPanel | string, options?: FloatingGroupOptions) => void;
+  /** Pop a panel or group out into its own browser window; resolves `true` on success. */
+  popout: (target: IDockviewPanel | DockviewGroupPanel | string, options?: DockviewPopoutGroupOptions) => Promise<boolean>;
+  /** Dock every floating window back into the main grid. */
+  dockAll: () => void;
 }
 ```
 
@@ -284,8 +294,6 @@ per-key typed — the `W` type param is inferred from the `widgets` prop):
 
 The parent should annotate the bound handle so per-key param typing is preserved
 (e.g. `let handle = $state<DockviewHandle<typeof widgets> | undefined>(undefined)`).
-`bind:active` gives a reactive `{ panel, group }` of the current active
-panel/group (see §9).
 
 The raw `DockviewApi` is reachable as `handle.api`, so nothing from the
 original `bind:api` plan is lost — it's renamed `handle.api`. `openPanel`
@@ -398,32 +406,7 @@ import 'dockview/dist/styles/dockview.css';
 `dockview` rather than `dockview-core`. The library never forces the import, so
 tree-shaking/SSR are unaffected.
 
-## 9. bind:active
-
-`bind:active` exposes the current active panel + group as a reactive object:
-
-```ts
-export interface ActiveState {
-  panel: IDockviewPanel | undefined;
-  group: DockviewGroupPanel | undefined;
-}
-```
-
-```svelte
-<script lang="ts">
-  import type { ActiveState } from 'dockview-svelte';
-  let active = $state<ActiveState>({ panel: undefined, group: undefined });
-</script>
-
-<Dockview bind:active {widgets} />
-<!-- active.panel / active.group update reactively -->
-```
-
-It mirrors `onDidActivePanelChange` / `onDidActiveGroupChange`. For the common
-case of a *widget* reacting to its own activation, prefer `state.active`
-(writable: set to `true` to activate) — that is the primary interaction point.
-
-## 10. What still counts as "completely open"
+## 9. What still counts as "completely open"
 
 - `handle.api` → every dockview escape hatch (`addPanel` with arbitrary
   component strings, `fromJSON`, `addFloatingGroup`, `removePanel`, …).
@@ -435,71 +418,7 @@ case of a *widget* reacting to its own activation, prefer `state.active`
 - The deferred `<DvWidgets>` snippet path slots into the same `registerWidget`
   hole — nothing here forecloses it.
 
-## 12. Empty state (watermark)
-
-With no panels open, `Dockview` shows the `watermark` prop — a plain Svelte
-component receiving `{ openPanel }` (`WatermarkProps`). It renders as a child
-overlay (absolute, above the empty grid) when `api.panels.length === 0`, so no
-dockview `IWatermarkRenderer` factory is involved and context flows
-automatically like any Svelte child. `options.createWatermarkComponent` stays
-a raw passthrough for imperative users; the prop is the Svelte-native path.
-`/demos/empty` covers it live: the watermark button opens a panel, `api.clear()`
-restores the empty state.
-
-## 13. Floating & popout windows (`bind:floating`/`bind:popout`, `handle.float`/`popout`/`dockAll`)
-
-`bind:floating` exposes `{ count, hasFloating }`; `bind:popout` exposes
-`{ count, hasPopout }`. Both are derived cheaply from the live api — floating
-from `api.groups.filter(g => g.api.location.type === 'floating')`, popout from
-`api.getPopouts()` — refreshed on layout/add/remove/move/FromJSON (and popout
-add/remove), so user drags update them with no extra wiring and no
-`toJSON()` churn.
-
-`handle.float(target, options?)` floats an existing panel or group
-(`IDockviewPanel`, `DockviewGroupPanel`, or panel id string) via
-`api.addFloatingGroup`; `handle.popout(target, options?)` mirrors it via
-`api.addPopoutGroup` (resolves `Promise<boolean>`); `handle.dockAll()` moves
-every non-grid panel back into the first grid group via `panel.api.moveTo`
-(targeting `api.groups` naively would move into a floating group — a no-op).
-Opening floating directly still works through `openPanel({ floating: { x, y,
-width, height } })` passthrough. `/demos/floating` covers all paths live, plus
-header/tab buttons (see §14).
-
-## 14. Group header actions (`left/right/prefixHeaderActions`)
-
-Svelte components rendered into dockview's group-header slots via the
-`createLeft/Right/PrefixHeaderActionComponent` factories (owned by the library
-when the props are set — Svelte components win over the raw `options`
-factories). Each receives `{ containerApi, group, state }` per group: `group`
-is the **concrete** `DockviewGroupPanel` (`.api`, `.id`, `.panels`), `state` is
-a reactive `GroupState` mirror (`isCollapsed`, `isPeeking`, `location`) driven
-by the group api's `onDid*` events, and the factory mounts with the parent
-`DockviewContext` so `getContext` also works. Because `group` is concrete,
-`containerApi.addFloatingGroup(group)` / `addPopoutGroup(group)` work directly —
-no interface re-resolution.
-
-Per-tab (panel-header) buttons need no new API: a custom `tab` component
-already receives the shared `state` (with `state.api.id`) and reads the parent
-api via `getContext(DOCKVIEW_CONTEXT_KEY)` → `api.getPanel(state.api.id)` →
-`addFloatingGroup`/`addPopoutGroup`. `/demos/floating` wires both:
-`rightHeaderActions={GroupHeaderActions}` (⧉/↗ per group) + `tab:
-PanelHeaderTab` (⧉/↗ per panel).
-
-## 9. Title fallback (resolved)
-
-There is **no global `defaultTitle` prop** — a single shared fallback for all
-widgets doesn't make sense. The widget key is the final fallback:
-
-```
-title = options.title ?? widgets[key].title ?? key
-```
-
-The widget key (`'chat'`, `'help'`) is the same string dockview uses as the
-component name, so it doubles as a sensible default label — matching dockview's
-own convention of defaulting a tab's title to its component id. Widgets that
-want a friendlier label declare `title` on their `WidgetDefinition`.
-
-## 11. Layout loop-break (bind:layout)
+## 10. Layout loop-break (bind:layout)
 
 `bind:layout` serializes on `onDidLayoutChange` and applies external changes via
 `fromJSON`, guarded by a `lastEmitted` deep-equal check to prevent the

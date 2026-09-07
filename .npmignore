@@ -1,0 +1,26 @@
+# Only `dist` (+ LICENSE, README.md, package.json) is published —
+# see the `files` whitelist in package.json. This file is defense-in-depth
+# so source, demos, tests, and workspace configs never leak into the tarball.
+
+src
+tests
+docs
+plans
+sandbox
+static
+test-results
+playwright-report
+.svelte-kit
+.vscode
+.output
+*.log
+.env
+.env.*
+
+# Workspace-only configs
+vite.config.*
+vitest.config.*
+playwright.config.*
+tsconfig.json
+biome.json
+svelte.config.*

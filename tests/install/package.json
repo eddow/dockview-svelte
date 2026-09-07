@@ -1,0 +1,24 @@
+{
+	"name": "dockview-svelte-install-test",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"description": "Minimal consumer that installs dockview-svelte from a local publish tarball",
+	"scripts": {
+		"dev": "vite dev --port 5180",
+		"build": "vite build",
+		"preview": "vite preview --port 5180",
+		"test": "playwright test"
+	},
+	"dependencies": {
+		"dockview": "^8.2.0",
+		"dockview-svelte": "file:./dockview-svelte-local.tgz",
+		"svelte": "^5.56.1"
+	},
+	"devDependencies": {
+		"@playwright/test": "1.62.1",
+		"@sveltejs/vite-plugin-svelte": "^7.1.2",
+		"typescript": "^6.0.3",
+		"vite": "^8.0.16"
+	}
+}

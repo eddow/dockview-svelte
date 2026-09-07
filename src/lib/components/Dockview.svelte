@@ -1,4 +1,4 @@
-<script lang="ts" generics="W extends Widgets">
+<script lang="ts" generics="const W extends Widgets">
 import type {
 	AddPanelOptions,
 	DockviewActivePanelChangeEvent,

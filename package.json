@@ -1,6 +1,6 @@
 {
 	"name": "dockview-svelte",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build && npm run prepack",
@@ -11,6 +11,7 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test:unit": "vitest run --config vitest.config.ts",
 		"test:e2e": "playwright test",
+		"test:install": "rm -f tests/install/dockview-svelte-*.tgz && npm pack --pack-destination tests/install && mv tests/install/dockview-svelte-*.tgz tests/install/dockview-svelte-local.tgz && npm --prefix tests/install install && npm --prefix tests/install test",
 		"biome": "biome check .",
 		"biome:fix": "biome check --write .",
 		"biome:unsafe": "biome check --write --unsafe ."

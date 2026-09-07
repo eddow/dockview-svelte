@@ -192,8 +192,7 @@ describe('Paneview component logic', () => {
 
 		;(captured!.handle as unknown as H).setVisible(h.id, false)
 		expect(
-			(captured!.api.getPanel(h.id) as unknown as { api: { setVisible: unknown } }).api
-				.setVisible
+			(captured!.api.getPanel(h.id) as unknown as { api: { setVisible: unknown } }).api.setVisible
 		).toHaveBeenCalledWith(false)
 		;(captured!.handle as unknown as H).setExpanded(h.id, false)
 		expect(captured!.api.getPanel(h.id)?.setExpanded).toHaveBeenCalledWith(false)

@@ -1,15 +1,15 @@
 <script lang="ts">
 import { themeAbyss, themeDark, themeDracula, themeLight } from 'dockview'
 import { onMount } from 'svelte'
-import { Dockview, type DockviewHandle, defineWidgets } from '$lib/index.js'
+import { Dockview, type DockviewHandle } from '$lib/index.js'
 import BasicPanel from '../_widgets/BasicPanel.svelte'
 
 const themes = { abyss: themeAbyss, dark: themeDark, light: themeLight, dracula: themeDracula }
 type ThemeName = keyof typeof themes
 
-const widgets = defineWidgets({
+const widgets = {
 	basic: { component: BasicPanel, title: 'Themed' },
-})
+}
 
 let handle = $state<DockviewHandle<typeof widgets> | undefined>(undefined)
 let name = $state<ThemeName>('abyss')

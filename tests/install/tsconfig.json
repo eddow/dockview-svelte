@@ -1,0 +1,21 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
+		"strict": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"resolveJsonModule": true,
+		"allowJs": true,
+		"checkJs": true,
+		"sourceMap": true,
+		"types": ["vite/client"]
+	},
+	"include": [
+		"src/**/*",
+		"tests/**/*",
+		"vite.config.ts",
+		"playwright.config.ts"
+	]
+}

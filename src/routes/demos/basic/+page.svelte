@@ -1,12 +1,12 @@
 <script lang="ts">
 import { themeAbyss } from 'dockview'
 import { onMount } from 'svelte'
-import { Dockview, type DockviewHandle, defineWidgets } from '$lib/index.js'
+import { Dockview, type DockviewHandle } from '$lib/index.js'
 import BasicPanel from '../_widgets/BasicPanel.svelte'
 
-const widgets = defineWidgets({
+const widgets = {
 	basic: { component: BasicPanel, title: 'Basic' },
-})
+}
 
 let handle = $state<DockviewHandle<typeof widgets> | undefined>(undefined)
 

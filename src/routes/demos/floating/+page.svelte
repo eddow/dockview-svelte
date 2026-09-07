@@ -1,21 +1,15 @@
 <script lang="ts">
 import { themeAbyss } from 'dockview'
 import { onMount } from 'svelte'
-import {
-	Dockview,
-	type DockviewHandle,
-	defineWidgets,
-	type FloatingState,
-	type PopoutState,
-} from '$lib/index.js'
+import { Dockview, type DockviewHandle, type FloatingState, type PopoutState } from '$lib/index.js'
 import BasicPanel from '../_widgets/BasicPanel.svelte'
 import GroupHeaderActions from '../_widgets/GroupHeaderActions.svelte'
 import PanelHeaderTab from '../_widgets/PanelHeaderTab.svelte'
 
-const widgets = defineWidgets({
+const widgets = {
 	a: { component: BasicPanel, tab: PanelHeaderTab, title: 'A' },
 	b: { component: BasicPanel, tab: PanelHeaderTab, title: 'B' },
-})
+}
 
 let handle = $state<DockviewHandle<typeof widgets> | undefined>(undefined)
 let floating = $state<FloatingState>({ count: 0, hasFloating: false })
