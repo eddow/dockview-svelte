@@ -26,16 +26,28 @@ test('basic demo opens a widget with highlighted source', async ({ page }) => {
 
 	await expect(page.getByRole('tab', { name: /Basic/ })).toBeVisible()
 	await expect(page.getByRole('tabpanel').getByText('Hello from a widget')).toBeVisible()
-	// Code starts collapsed (zero-width pane); the toggle reveals it.
-	const toggle = page.getByRole('button', { name: 'Show code' })
+	// Code starts visible at 50/50; the toggle collapses it.
+	const toggle = page.getByRole('button', { name: 'Hide code' })
 	await expect(toggle).toBeVisible()
-	await toggle.click()
-	await expect(page.getByRole('button', { name: 'Hide code' })).toBeVisible()
 	// Display-only Shiki block shows the demo source.
 	await expect(page.getByText('openPanel', { exact: false }).first()).toBeVisible()
-	// Hiding collapses the pane again.
+	// Both outer panes render side by side with non-zero width (~50/50).
+	// (Scoped to `.pane-scroll`: the outer split's two panes. A bare
+	// `.dv-view` selector would also match dockview's nested splitviews
+	// inside the demo itself.)
+	const widths = await page
+		.locator('.split-wrap .pane-scroll')
+		.evaluateAll((els) => els.map((el) => el.getBoundingClientRect().width))
+	expect(widths.length).toBe(2)
+	for (const w of widths) expect(w).toBeGreaterThan(100)
+	const ratio = widths[0] / (widths[0] + widths[1])
+	expect(ratio).toBeGreaterThan(0.35)
+	expect(ratio).toBeLessThan(0.65)
+	// Hiding collapses the pane; showing restores it.
 	await page.getByRole('button', { name: 'Hide code' }).click()
 	await expect(page.getByRole('button', { name: 'Show code' })).toBeVisible()
+	await page.getByRole('button', { name: 'Show code' }).click()
+	await expect(page.getByRole('button', { name: 'Hide code' })).toBeVisible()
 })
 
 test('params demo round-trips reactive params', async ({ page }) => {

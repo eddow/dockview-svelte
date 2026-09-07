@@ -16,6 +16,8 @@ playwright-report
 *.log
 .env
 .env.*
+.output
+.vercel
 
 # Workspace-only configs
 vite.config.*
