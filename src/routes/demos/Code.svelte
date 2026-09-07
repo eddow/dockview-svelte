@@ -1,25 +1,25 @@
 <script lang="ts">
-	import { highlight } from './highlight.js'
+import { highlight } from './highlight.js'
 
-	interface Props {
-		code: string
-		lang?: 'svelte' | 'typescript'
-		title?: string
-	}
+interface Props {
+	code: string
+	lang?: 'svelte' | 'typescript'
+	title?: string
+}
 
-	let { code, lang = 'svelte', title = 'Code' }: Props = $props()
+let { code, lang = 'svelte', title = 'Code' }: Props = $props()
 
-	let html = $state('<pre><code>loading…</code></pre>')
+let html = $state('<pre><code>loading…</code></pre>')
 
-	$effect(() => {
-		let cancelled = false
-		highlight(code, lang).then((h) => {
-			if (!cancelled) html = h
-		})
-		return () => {
-			cancelled = true
-		}
+$effect(() => {
+	let cancelled = false
+	highlight(code, lang).then((h) => {
+		if (!cancelled) html = h
 	})
+	return () => {
+		cancelled = true
+	}
+})
 </script>
 
 <details class="code" open>

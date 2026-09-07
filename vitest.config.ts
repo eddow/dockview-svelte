@@ -11,6 +11,9 @@ export default defineConfig({
 	},
 	test: {
 		include: ['src/**/*.{test,spec}.{js,ts}'],
+		// `tests/install` is a separate consumer project (own package.json +
+		// node_modules) — never pick it up in the main suite, at least on CI.
+		exclude: ['**/node_modules/**', '**/dist/**', 'tests/install/**/*'],
 		environment: 'jsdom',
 	},
 })
