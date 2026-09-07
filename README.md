@@ -1,5 +1,9 @@
 # dockview-svelte
 
+[![npm version](https://img.shields.io/npm/v/dockview-svelte.svg)](https://www.npmjs.com/package/dockview-svelte) [![npm downloads](https://img.shields.io/npm/dm/dockview-svelte.svg)](https://www.npmjs.com/package/dockview-svelte) [![CI](https://github.com/eddow/dockview-svelte/actions/workflows/ci.yml/badge.svg)](https://github.com/eddow/dockview-svelte/actions/workflows/ci.yml) [![License: AGPL-3.0](https://img.shields.io/npm/l/dockview-svelte.svg)](https://github.com/eddow/dockview-svelte/blob/main/LICENSE) [![GitHub stars](https://img.shields.io/github/stars/eddow/dockview-svelte.svg)](https://github.com/eddow/dockview-svelte)
+
+[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/fork/github/eddow/dockview-svelte)
+
 Svelte 5 (runes) wrapper around the [Dockview](https://dockview.dev) layout engine — docking panels, tab groups, drag-and-drop, floating groups, popouts, and serialization, with a Svelte-native API.
 
 - **Widgets, not portals**: register Svelte components in a `widgets` map; the library mounts them into Dockview's content and tab slots via `mount`/`unmount`.
@@ -477,4 +481,4 @@ highlighted source (Shiki, display-only):
 
 ## License
 
-MIT
+AGPL-3.0-only — see [LICENSE](https://github.com/eddow/dockview-svelte/blob/main/LICENSE).

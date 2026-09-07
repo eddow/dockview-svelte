@@ -1,6 +1,6 @@
 {
 	"name": "dockview-svelte",
-	"version": "0.0.2",
+	"version": "1.0.0",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build && npm run prepack",
@@ -58,9 +58,24 @@
 		"vitest-browser-svelte": "^3.1.0"
 	},
 	"keywords": [
-		"svelte"
+		"svelte",
+		"sveltekit",
+		"svelte5",
+		"dockview",
+		"layout",
+		"docking",
+		"panels",
+		"tabs"
 	],
 	"license": "AGPL-3.0-only",
+	"homepage": "https://github.com/eddow/dockview-svelte#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/eddow/dockview-svelte.git"
+	},
+	"bugs": {
+		"url": "https://github.com/eddow/dockview-svelte/issues"
+	},
 	"dependencies": {
 		"dockview": "^8.2.0"
 	}
