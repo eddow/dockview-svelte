@@ -1,6 +1,6 @@
 {
 	"name": "dockview-svelte",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build && npm run prepack",
@@ -17,6 +17,7 @@
 		"biome:fix": "biome check --write .",
 		"biome:unsafe": "biome check --write --unsafe ."
 	},
+	"author": "François Marie De Mey <eeddow@gmail.com>",
 	"files": [
 		"dist",
 		"!dist/**/*.test.*",
@@ -67,7 +68,7 @@
 		"panels",
 		"tabs"
 	],
-	"license": "AGPL-3.0-only",
+	"license": "MIT",
 	"homepage": "https://github.com/eddow/dockview-svelte#readme",
 	"repository": {
 		"type": "git",

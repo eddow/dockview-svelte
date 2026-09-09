@@ -1,8 +1,9 @@
 # dockview-svelte
 
-[![npm version](https://img.shields.io/npm/v/dockview-svelte.svg)](https://www.npmjs.com/package/dockview-svelte) [![npm downloads](https://img.shields.io/npm/dm/dockview-svelte.svg)](https://www.npmjs.com/package/dockview-svelte) [![CI](https://github.com/eddow/dockview-svelte/actions/workflows/ci.yml/badge.svg)](https://github.com/eddow/dockview-svelte/actions/workflows/ci.yml) [![License: AGPL-3.0](https://img.shields.io/npm/l/dockview-svelte.svg)](https://github.com/eddow/dockview-svelte/blob/main/LICENSE) [![GitHub stars](https://img.shields.io/github/stars/eddow/dockview-svelte.svg)](https://github.com/eddow/dockview-svelte)
+[![npm version](https://img.shields.io/npm/v/dockview-svelte.svg)](https://www.npmjs.com/package/dockview-svelte) [![npm downloads](https://img.shields.io/npm/dm/dockview-svelte.svg)](https://www.npmjs.com/package/dockview-svelte) [![CI](https://github.com/eddow/dockview-svelte/actions/workflows/ci.yml/badge.svg)](https://github.com/eddow/dockview-svelte/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/npm/l/dockview-svelte.svg)](https://github.com/eddow/dockview-svelte/blob/main/LICENSE) [![GitHub stars](https://img.shields.io/github/stars/eddow/dockview-svelte.svg)](https://github.com/eddow/dockview-svelte) [![Live Demo](https://img.shields.io/badge/Live_Demo-Vercel-black?logo=vercel&logoColor=white)](https://dockview-svelte.vercel.app)
 
 [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/fork/github/eddow/dockview-svelte)
+[![Support on Ko-fi](https://img.shields.io/badge/Support-Ko--fi-ff5e5b?style=for-the-badge&logo=kofi&logoColor=white)](https://ko-fi.com/emedware)
 
 Svelte 5 (runes) wrapper around the [Dockview](https://dockview.dev) layout engine — docking panels, tab groups, drag-and-drop, floating groups, popouts, and serialization, with a Svelte-native API.
 
@@ -481,4 +482,4 @@ highlighted source (Shiki, display-only):
 
 ## License
 
-AGPL-3.0-only — see [LICENSE](https://github.com/eddow/dockview-svelte/blob/main/LICENSE).
+MIT — see [LICENSE](https://github.com/eddow/dockview-svelte/blob/main/LICENSE).
