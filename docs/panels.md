@@ -421,15 +421,49 @@ tree-shaking/SSR are unaffected.
 ## 10. Layout loop-break (bind:layout)
 
 `bind:layout` serializes on `onDidLayoutChange` and applies external changes via
-`fromJSON`, guarded by a `lastEmitted` deep-equal check to prevent the
-`fromJSON → onDidLayoutChange → emit` feedback loop.
+`fromJSON`. The guard that prevents the `fromJSON → onDidLayoutChange → emit`
+feedback loop compares the **serialized** layout, not the objects:
 
-`onDidLayoutFromJSON` is **deliberately not** part of the loop-break. dockview
-runs `fromJSON()` inside `mutation("load")`, which fires `onWillMutateLayout` /
+```ts
+let lastEmittedJson: string | undefined
+
+function emitLayout(): void {
+  const json = api.toJSON()
+  lastEmittedJson = JSON.stringify(json)
+  layout = json
+}
+
+$effect(() => {
+  if (!api || !layout) return
+  const json = JSON.stringify(layout)
+  if (json === lastEmittedJson) return
+  lastEmittedJson = json   // record BEFORE applying (re-entrant emit)
+  api.fromJSON(layout)
+})
+```
+
+**Why a string, not `deepEqual` on the objects.** The canonical save/restore
+flow round-trips through `JSON.stringify`/`JSON.parse`, which drops the
+`undefined`-valued keys `toJSON()` emits (`params`, `pinned`, `renderer`,
+`minimumWidth`, …). `deepEqual` deliberately treats `{ k: undefined }` and `{}`
+as different, so a structural compare never recognises the restored layout as
+"already current": re-applying the *current* layout would call `fromJSON` again,
+tearing down and rebuilding every panel and losing per-panel state. Stringifying
+both sides drops `undefined` consistently.
+
+`lastEmittedJson` is assigned **before** `fromJSON()` because the apply
+re-enters the effect through `emitLayout()` (see below); the pre-assignment
+makes that re-entrant run a no-op.
+
+The initial `layout` prop is applied in `onMount` (the `$effect` only reacts to
+changes) and re-emitted canonically; teardown resets `lastEmittedJson`. All four
+layouts (`Dockview`, `Gridview`, `Splitview`, `Paneview`) use this same idiom.
+
+`onDidLayoutFromJSON` is **deliberately not** a second emit path. dockview runs
+`fromJSON()` inside `mutation("load")`, which fires `onWillMutateLayout` /
 `onDidMutateLayout` then `onDidLayoutFromJSON`, and the whole batch aggregates
 into the buffered `onDidLayoutChange` — the single emitter that serializes into
-`bind:layout` (stamping `lastEmitted`). So a `fromJSON` triggered by the
-`$effect` always converges (the emitted JSON deep-equals `lastEmitted` on the
-next pass), and `onDidLayoutFromJSON` stays a pure "restore finished"
-notification rather than a second emit path — wiring it into `lastEmitted`
-would double-emit, not harden.
+`bind:layout` (stamping `lastEmittedJson`). So a `fromJSON` triggered by the
+`$effect` always converges, and `onDidLayoutFromJSON` stays a pure "restore
+finished" notification — wiring it into the emit path would double-emit, not
+harden.

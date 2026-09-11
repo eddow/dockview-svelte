@@ -182,7 +182,11 @@ localStorage.setItem('layout', JSON.stringify(layout)); // save
 layout = JSON.parse(saved); // restore — applied via fromJSON
 ```
 
-A `lastEmitted` + deep-equal guard prevents the `fromJSON → onDidLayoutChange → emit` feedback loop.
+The loop-break compares the **serialized** form, not the objects: a save/restore
+round-trip goes through `JSON.stringify`/`JSON.parse`, which drops the
+`undefined`-valued keys `toJSON()` emits (`params`, `pinned`, …). A structural
+compare treats those as different, so re-applying the current layout would call
+`fromJSON` again and rebuild every panel.
 
 ## Events
 

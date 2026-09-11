@@ -1,24 +1,22 @@
 <script lang="ts">
-	import { onMount } from 'svelte'
-	import { themeAbyss, type SerializedDockview } from 'dockview'
-	import 'dockview/dist/styles/dockview.css'
-	import { Dockview, DvWidget, type DockviewHandle, type PanelState } from 'dockview-svelte'
+import { type SerializedDockview, themeAbyss } from 'dockview'
+import { onMount } from 'svelte'
+import { Dockview, type DockviewHandle, DvWidget, type PanelState } from '$lib/index.js'
 
-	type Params = { n: number }
+type Params = { n: number }
 
-	let handle = $state<DockviewHandle>()
-	let layout = $state<SerializedDockview>()
-	let saved = $state<string>()
-	let seq = 1
+let handle = $state<DockviewHandle>()
+let layout = $state<SerializedDockview>()
+let saved = $state<string>()
+let seq = 1
 
-	/** Open one more panel of a widget, numbered through `params`. */
-	const open = (widget: 'files' | 'notes') =>
-		handle?.openPanel(widget, { params: { n: seq++ } satisfies Params })
+const open = (widget: 'files' | 'notes') =>
+	handle?.openPanel(widget, { params: { n: seq++ } satisfies Params })
 
-	onMount(() => {
-		open('files')
-		open('notes')
-	})
+onMount(() => {
+	open('files')
+	open('notes')
+})
 </script>
 
 <div class="bar">
@@ -32,8 +30,6 @@
 
 <div class="dock">
 	<Dockview bind:handle bind:layout options={{ theme: themeAbyss }}>
-		<!-- `children` is the body, `tab` the header — both get the SAME
-		     reactive PanelState. `state.custom` is the tab↔content channel. -->
 		<DvWidget name="files" title="Files">
 			{#snippet children(state: PanelState<Params>)}
 				<div class="body">
@@ -52,8 +48,6 @@
 				</div>
 			{/snippet}
 		</DvWidget>
-
-		<!-- No `tab` snippet → the built-in default tab is used. -->
 		<DvWidget name="notes" title="Notes">
 			{#snippet children(state: PanelState<Params>)}
 				<div class="body">
@@ -67,16 +61,6 @@
 </div>
 
 <style>
-	/* App chrome only — panel look & feel is 100% dockview's stylesheet. */
-	:global(body) {
-		margin: 0;
-		height: 100vh;
-		display: flex;
-		flex-direction: column;
-		font:
-			14px/1.4 system-ui,
-			sans-serif;
-	}
 	.bar {
 		display: flex;
 		gap: 0.5rem;
@@ -84,8 +68,7 @@
 		padding: 0.5rem;
 	}
 	.dock {
-		flex: 1;
-		min-height: 0;
+		height: 40vh;
 	}
 	.grow {
 		flex: 1;
@@ -96,7 +79,6 @@
 	}
 	.body {
 		padding: 1rem;
-		color: var(--dv-activegroup-visiblepanel-tab-color);
 	}
 	.tab {
 		display: flex;
