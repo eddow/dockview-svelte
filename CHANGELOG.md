@@ -1,3 +1,7 @@
+## 1.0.3
+
+- Fix publication process
+
 ## 1.0.2
 
 - Affecting to the layout attribute now changes the layout
