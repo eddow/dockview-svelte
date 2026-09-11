@@ -1,6 +1,4 @@
-## 1.0.3
-
-- Fix publication process
+## 1.0.3 (next)
 
 ## 1.0.2
 
